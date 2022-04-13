@@ -15,3 +15,27 @@ They made a second library from a pool of 16 larvae, with thorough DNA cleaning 
 For an initial assembly, just used the data from the "good library". Adding the other 2 runs contributes very little in terms of extra coverage and rists adding some suspect data into the mix. Furthermore, since the 2 libraries were prepared from different pools of individuals, mixing libraries will increase the genetic variation in the assembly data.
 
 Inital assembly was done with flye 2.8 with defaullt params for hifi data.
+
+Basic assembly stats provided by flye:
+
+Total length:   2082541779
+Fragments:      47821
+Fragments N50:  98363
+Largest frg:    1740295
+Scaffolds:      88
+Mean coverage:  12
+
+Basic stats from the Sanger assembly stats tool:
+
+stats for flyeAssembly/assembly.fasta
+sum = 2082541779, n = 47821, ave = 43548.69, largest = 1740295
+N50 = 98363, n = 5064
+N60 = 71807, n = 7550
+N70 = 49272, n = 11046
+N80 = 33214, n = 16181
+N90 = 19720, n = 24238
+N100 = 12, n = 47821
+N_count = 8800
+Gaps = 88
+
+So, total assembly is about 2.08 Gb. That puts is around 200Mb larger than the known genome size. Most likely, we have some redundant contigs due to genetic variation in the source material. We should be able to correct this with `purge_haplotigs` or similar tool.
