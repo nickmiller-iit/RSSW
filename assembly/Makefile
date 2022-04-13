@@ -42,3 +42,14 @@ $(flyeOut): $(assemblyHifiReads)
 .PHONY: flye-asm
 
 flye-asm: $(flyeOut)
+
+# Basic stats for initial assembly
+
+asmStatsFile=$(flyeAsmDir)/assembly.stats
+
+$(asmStatsFile): $(flyeOut)
+	conda run -n rssw-assemblyStats assembly-stats $(flyeOut) > $(asmStatsFile)
+
+.PHONY: asm-stats
+
+asm-stats: $(asmStatsFile)
