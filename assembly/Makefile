@@ -53,3 +53,20 @@ $(asmStatsFile): $(flyeOut)
 .PHONY: asm-stats
 
 asm-stats: $(asmStatsFile)
+
+# BUSCO analysis of the initial assembly
+
+BUSCOLineage=endopterygota_odb10
+
+BUSCOOutDir=busco_flye
+
+BUSCOOutFile=$(BUSCOOutDir)/$(BUSCOLineage)/full_table.tsv
+
+BUSCOOpts= --mode genome --augustus --long --lineage $(BUSCOLineage) --cpu 56
+
+$(BUSCOOutFile): $(flyeOut)
+	conda run --no-capture-output -n rssw-busco busco -i $(flyeOut) $(BUSCOOpts) --out $(BUSCOOutDir)
+
+.PHONY: busco-analysis
+
+busco-analysis: $(BUSCOOutFile) 
