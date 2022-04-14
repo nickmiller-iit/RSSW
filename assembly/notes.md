@@ -18,25 +18,26 @@ Inital assembly was done with flye 2.8 with defaullt params for hifi data.
 
 Basic assembly stats provided by flye:
 
-Total length:   2082541779
-Fragments:      47821
-Fragments N50:  98363
-Largest frg:    1740295
-Scaffolds:      88
-Mean coverage:  12
+	Total length:   2082541779
+	Fragments:      47821
+	Fragments N50:  98363
+	Largest frg:    1740295
+	Scaffolds:      88
+	Mean coverage:  12
 
 Basic stats from the Sanger assembly stats tool:
 
 stats for flyeAssembly/assembly.fasta
-sum = 2082541779, n = 47821, ave = 43548.69, largest = 1740295
-N50 = 98363, n = 5064
-N60 = 71807, n = 7550
-N70 = 49272, n = 11046
-N80 = 33214, n = 16181
-N90 = 19720, n = 24238
-N100 = 12, n = 47821
-N_count = 8800
-Gaps = 88
+
+	sum = 2082541779, n = 47821, ave = 43548.69, largest = 1740295
+	N50 = 98363, n = 5064
+	N60 = 71807, n = 7550
+	N70 = 49272, n = 11046
+	N80 = 33214, n = 16181
+	N90 = 19720, n = 24238
+	N100 = 12, n = 47821
+	N_count = 8800
+	Gaps = 88
 
 So, total assembly is about 2.08 Gb. That puts is around 200Mb larger than the known genome size. Most likely, we have some redundant contigs due to genetic variation in the source material. We should be able to correct this with `purge_haplotigs` or similar tool.
 
@@ -51,3 +52,4 @@ Also ran a BUSCO analysis of this initial assembly (NB, takes a day or so to run
 	2124	Total BUSCO groups searched
 
 While far from perfect, this is no too bad for a first pass. Having about 10% duplicated BUSCOs is pretty consistent with the idea that the assembly is about 10% bigger than it should be due to redundant contigs. The ~30% missing BUSCOs is a little concerning, but we need to keep in mind that the gene finding done here is pretty quick & dirty, so there's a good chance some BUSCOs are being missed, even if they are in the assembly.
+
