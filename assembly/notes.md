@@ -53,3 +53,6 @@ Also ran a BUSCO analysis of this initial assembly (NB, takes a day or so to run
 
 While far from perfect, this is no too bad for a first pass. Having about 10% duplicated BUSCOs is pretty consistent with the idea that the assembly is about 10% bigger than it should be due to redundant contigs. The ~30% missing BUSCOs is a little concerning, but we need to keep in mind that the gene finding done here is pretty quick & dirty, so there's a good chance some BUSCOs are being missed, even if they are in the assembly.
 
+## Initial assembly with hifiasm
+
+For comparison, trying a different assembler. Hifiasm is quick and has a been used to assemble several insect genomes.
