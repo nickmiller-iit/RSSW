@@ -10,7 +10,7 @@ UIUC ended up preparing 2 PacBio HiFi libraries. The first one performed poorly.
 
 They made a second library from a pool of 16 larvae, with thorough DNA cleaning (Weevil_m64108e_220407_204305.hifi_reads.fastq.gz), that performed much better, yeilding 30.1 Gb total read data and mean read length of 11.4 kb.
 
-## Assembly
+## Initial Assembly with flye
 
 For an initial assembly, just used the data from the "good library". Adding the other 2 runs contributes very little in terms of extra coverage and rists adding some suspect data into the mix. Furthermore, since the 2 libraries were prepared from different pools of individuals, mixing libraries will increase the genetic variation in the assembly data.
 
@@ -39,3 +39,15 @@ N_count = 8800
 Gaps = 88
 
 So, total assembly is about 2.08 Gb. That puts is around 200Mb larger than the known genome size. Most likely, we have some redundant contigs due to genetic variation in the source material. We should be able to correct this with `purge_haplotigs` or similar tool.
+
+Also ran a BUSCO analysis of this initial assembly (NB, takes a day or so to run), using the endopterygote database. Results are:
+
+	C:64.1%[S:54.0%,D:10.1%],F:6.0%,M:29.9%,n:2124
+	1361	Complete BUSCOs (C)
+	1147	Complete and single-copy BUSCOs (S)
+	214	Complete and duplicated BUSCOs (D)
+	127	Fragmented BUSCOs (F)
+	636	Missing BUSCOs (M)
+	2124	Total BUSCO groups searched
+
+While far from perfect, this is no too bad for a first pass. Having about 10% duplicated BUSCOs is pretty consistent with the idea that the assembly is about 10% bigger than it should be due to redundant contigs. The ~30% missing BUSCOs is a little concerning, but we need to keep in mind that the gene finding done here is pretty quick & dirty, so there's a good chance some BUSCOs are being missed, even if they are in the assembly.
