@@ -1,0 +1,5 @@
+name: rssw-hifiasm
+channels:
+ - bioconda
+dependencies:
+ - hifiasm=0.15.5
