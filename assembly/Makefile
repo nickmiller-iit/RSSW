@@ -71,22 +71,17 @@ $(BUSCOOutFile): $(flyeOut)
 
 busco-analysis: $(BUSCOOutFile) 
 
-# initial assembly with hifiasm
+# # initial assembly with hifiasm
 
-hifiasmPrefix=rssw_hifiasm
+# hifiasmPrefix=rssw_hifiasm
 
-hifiasmOutFile=$(hifiasmPrefix).p_ctg.gfa
+# hifiasmOutFile=$(hifiasmPrefix).p_ctg.gfa
 
-hifiasmOpts=-o $(hifiasmPrefix)  --primary -t 56
+# hifiasmOpts=-o $(hifiasmPrefix)  --primary -t 56
 
-$(hifiasmOutFile): $(assemblyHifiReads)
-	conda run --no-capture-output -n rssw-hifiasm hifiasm $(hifiasmOpts) $(assemblyHifiReads)
+# $(hifiasmOutFile): $(assemblyHifiReads)
+# 	conda run --no-capture-output -n rssw-hifiasm hifiasm $(hifiasmOpts) $(assemblyHifiReads)
 
-.PHONY: hifiasm-asm
+# .PHONY: hifiasm-asm
 
-hifiasm-asm: $(hifiasmOutFile)
-
-.PHONY: test
-
-test:
-	echo $(hifiasmPrefix)
+# hifiasm-asm: $(hifiasmOutFile)
