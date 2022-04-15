@@ -24,7 +24,7 @@ $(fastqcFiles): $(allHifiReadFiles) | $(fastqcDir)
 
 fastqc: $(fastqcFiles)
 
-# Initial assembly
+# Initial assembly with flye
 
 #only use reads from good library
 assemblyHifiReads=$(readDir)/Weevil_m64108e_220407_204305.hifi_reads.fastq.gz
@@ -70,3 +70,23 @@ $(BUSCOOutFile): $(flyeOut)
 .PHONY: busco-analysis
 
 busco-analysis: $(BUSCOOutFile) 
+
+# initial assembly with hifiasm
+
+hifiasmPrefix=rssw_hifiasm
+
+hifiasmOutFile=$(hifiasmPrefix).p_ctg.gfa
+
+hifiasmOpts=-o $(hifiasmPrefix)  --primary -t 56
+
+$(hifiasmOutFile): $(assemblyHifiReads)
+	conda run --no-capture-output -n rssw-hifiasm hifiasm $(hifiasmOpts) $(assemblyHifiReads)
+
+.PHONY: hifiasm-asm
+
+hifiasm-asm: $(hifiasmOutFile)
+
+.PHONY: test
+
+test:
+	echo $(hifiasmPrefix)
