@@ -1,0 +1,6 @@
+name: rssw-redundans
+channels:
+ - genomedk
+dependencies:
+ - python=2.7
+ - redundans=2020.01.28
