@@ -45,14 +45,14 @@ flye-asm: $(flyeOut)
 
 # Basic stats for initial assembly
 
-asmStatsFile=$(flyeAsmDir)/assembly.stats
+flyeAsmStatsFile=$(flyeAsmDir)/assembly.stats
 
-$(asmStatsFile): $(flyeOut)
-	conda run -n rssw-assemblyStats assembly-stats $(flyeOut) > $(asmStatsFile)
+$(flyeAsmStatsFile): $(flyeOut)
+	conda run -n rssw-assemblyStats assembly-stats $(flyeOut) > $(flyeAsmStatsFile)
 
-.PHONY: asm-stats
+.PHONY: flyeAsm-stats
 
-asm-stats: $(asmStatsFile)
+flyeAsm-stats: $(flyeAsmStatsFile)
 
 # BUSCO analysis of the initial assembly
 
@@ -74,7 +74,7 @@ busco-analysis: $(BUSCOOutFile)
 # Use redundans to remove redundant contigs due to pooled input DNA
 redundansOutDir=flyeRedundans
 
-redundansOutput=$(redundansOutDir)/scaffolds.filled.fa
+redundansOutput=$(redundansOutDir)/scaffolds.reduced.fa
 
 redundansOpts=--threads 54 --mem 128 --outdir $(redundansOutDir)
 
@@ -84,3 +84,14 @@ $(redundansOutput): $(flyeOut)
 .PHONY: deduplicate
 
 deduplicate: $(redundansOutput)
+
+# Basic stats for assembly deduplicated with redundans
+
+flyeRedundansAsmStatsFile=$(redundansOutDir)/assembly.stats
+
+$(flyeRedundansAsmStatsFile): $(redundansOutput)
+	conda run -n rssw-assemblyStats assembly-stats $(redundansOutput) > $(flyeRedundansAsmStatsFile)
+
+.PHONY: flyeRedundansAsm-stats
+
+flyeRedundansAsm-stats: $(flyeRedundansAsmStatsFile)
