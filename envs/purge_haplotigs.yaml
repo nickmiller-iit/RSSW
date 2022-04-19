@@ -1,6 +1,0 @@
-name: rssw-purge_haplotigs
-channels:
- - bioconda
-dependencies:
- - purge_haplotigs=1.1.2
- - openssl=1.0
