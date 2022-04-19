@@ -71,17 +71,16 @@ $(BUSCOOutFile): $(flyeOut)
 
 busco-analysis: $(BUSCOOutFile) 
 
-# # initial assembly with hifiasm
+# Use redundans to remove redundant contigs due to pooled input DNA
+redundansOutDir=flyeRedundans
 
-# hifiasmPrefix=rssw_hifiasm
+redundansOutput=$(redundansOutDir)/scaffolds.filled.fa
 
-# hifiasmOutFile=$(hifiasmPrefix).p_ctg.gfa
+redundansOpts=--threads 54 --mem 128 --outdir $(redundansOutDir)
 
-# hifiasmOpts=-o $(hifiasmPrefix)  --primary -t 56
+$(redundansOutput): $(flyeOut)
+	conda run --no-capture-output -n rssw-redundans redundans.py $(redundansOpts) -f $(flyeOut)
 
-# $(hifiasmOutFile): $(assemblyHifiReads)
-# 	conda run --no-capture-output -n rssw-hifiasm hifiasm $(hifiasmOpts) $(assemblyHifiReads)
+.PHONY: deduplicate
 
-# .PHONY: hifiasm-asm
-
-# hifiasm-asm: $(hifiasmOutFile)
+deduplicate: $(redundansOutput)
