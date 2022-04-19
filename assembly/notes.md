@@ -60,3 +60,22 @@ While far from perfect, this is no too bad for a first pass. Having about 10% du
 For comparison, trying a different assembler. Hifiasm is quick and has a been used to assemble several insect genomes.
 
 Unfortunately my first attempt to run hifiasm failed. Because this was run via `conda run` and `make` it is not obvious what went wrong. Might come back to this later.
+
+
+## Deduplication of flye assembly with redundans
+
+Since we appear to have some "excess" sequence in our genome, try to get rid of redundant haplotigs with `redundans`. As and aside, I also tried `purge_haplotigs` but it was bahaving oddly. After running redundans with just the flye assembly as input, we get the following assembly stats.
+
+	sum = 1844871505, n = 28898, ave = 63840.80, largest = 1740295
+	N50 = 115390, n = 4020
+	N60 = 86115, n = 5881
+	N70 = 63455, n = 8372
+	N80 = 44015, n = 11870
+	N90 = 28279, n = 17085
+	N100 = 476, n = 28898
+	N_count = 7600
+	Gaps = 76
+	
+*NB* the estimate genome size from flow cytometry is 1.84 Gb ± 0.02. We are pretty much smack on the expected genome size here
+
+If redundans has done what we hope it has, the reduction in genome size should result in BUSCOs that were found as duplicated in the initial assembly being shifted to the single copy category. Re-ran BUSCO analysis using identical settings as for the initial assembly.
