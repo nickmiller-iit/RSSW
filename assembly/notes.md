@@ -78,4 +78,14 @@ Since we appear to have some "excess" sequence in our genome, try to get rid of 
 	
 *NB* the estimate genome size from flow cytometry is 1.84 Gb ± 0.02. We are pretty much smack on the expected genome size here
 
-If redundans has done what we hope it has, the reduction in genome size should result in BUSCOs that were found as duplicated in the initial assembly being shifted to the single copy category. Re-ran BUSCO analysis using identical settings as for the initial assembly.
+If redundans has done what we hope it has, the reduction in genome size should result in BUSCOs that were found as duplicated in the initial assembly being shifted to the single copy category. Re-ran BUSCO analysis using identical settings as for the initial assembly:
+
+	C:63.5%[S:54.8%,D:8.7%],F:6.2%,M:30.3%,n:2124
+	1349	Complete BUSCOs (C)
+	1165	Complete and single-copy BUSCOs (S)
+	184	Complete and duplicated BUSCOs (D)
+	132	Fragmented BUSCOs (F)
+	643	Missing BUSCOs (M)
+	2124	Total BUSCO groups searched
+
+This is not quite as big an improvement as I had hoped, in particular I would have liked to see more BUSCOs shift from the duplicated to the the single copy category.
