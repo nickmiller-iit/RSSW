@@ -58,18 +58,18 @@ flyeAsm-stats: $(flyeAsmStatsFile)
 
 BUSCOLineage=endopterygota_odb10
 
-BUSCOOutDir=busco_flye
+BUSCOFlyeOutDir=busco_flye
 
-BUSCOOutFile=$(BUSCOOutDir)/$(BUSCOLineage)/full_table.tsv
+BUSCOFlyeOutFile=$(BUSCOFlyeOutDir)/run_$(BUSCOLineage)/full_table.tsv
 
 BUSCOOpts= --mode genome --augustus --long --lineage $(BUSCOLineage) --cpu 56
 
-$(BUSCOOutFile): $(flyeOut)
-	conda run --no-capture-output -n rssw-busco busco -i $(flyeOut) $(BUSCOOpts) --out $(BUSCOOutDir)
+$(BUSCOFlyeOutFile): $(flyeOut)
+	conda run --no-capture-output -n rssw-busco busco -i $(flyeOut) $(BUSCOOpts) --out $(BUSCOFlyeOutDir)
 
-.PHONY: busco-analysis
+.PHONY: busco-analysis-flye
 
-busco-analysis: $(BUSCOOutFile) 
+busco-analysis-flye: $(BUSCOFlyeOutFile) 
 
 # Use redundans to remove redundant contigs due to pooled input DNA
 redundansOutDir=flyeRedundans
@@ -95,3 +95,19 @@ $(flyeRedundansAsmStatsFile): $(redundansOutput)
 .PHONY: flyeRedundansAsm-stats
 
 flyeRedundansAsm-stats: $(flyeRedundansAsmStatsFile)
+
+
+# BUSCO analysis of the flye assembly deduplicated with redundans
+
+BUSCOFlyeRedundansOutDir=busco_flyeRedundans
+
+BUSCOFlyeRedundansOutFile=$(BUSCOFlyeRedundansOutDir)/run_$(BUSCOLineage)/full_table.tsv
+
+BUSCOOpts= --mode genome --augustus --long --lineage $(BUSCOLineage) --cpu 56
+
+$(BUSCOFlyeRedundansOutFile): $(redundansOutput)
+	conda run --no-capture-output -n rssw-busco busco -i $(redundansOutput) $(BUSCOOpts) --out $(BUSCOFlyeRedundansOutDir)
+
+.PHONY: busco-analysis-flyeRedundans
+
+busco-analysis-flyeRedundans: $(BUSCOFlyeRedundansOutFile) 
