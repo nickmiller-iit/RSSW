@@ -1,0 +1,6 @@
+name: rssw-purge_dups
+channels:
+ - bioconda
+dependencies:
+ - purge_dups=1.2.5
+ - python=3
