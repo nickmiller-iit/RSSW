@@ -111,3 +111,56 @@ $(BUSCOFlyeRedundansOutFile): $(redundansOutput)
 .PHONY: busco-analysis-flyeRedundans
 
 busco-analysis-flyeRedundans: $(BUSCOFlyeRedundansOutFile) 
+
+# As an alternative to redundans, try purge_dups.
+
+purgeDupsOutDir=flyePurgeDups
+
+
+$(purgeDupsOutDir):
+	if [ ! -d $(purgeDupsOutDir) ]; then mkdir $(purgeDupsOutDir); fi
+
+purgeDupsMappedReads=$(purgeDupsOutDir)/$(subst .fastq.gz,.paf.gz,$(notdir $(assemblyHifiReads)))
+
+$(purgeDupsMappedReads): $(flyeOut) $(assemblyHifiReads) | $(purgeDupsOutDir)
+	conda run --no-capture-output -n rssw-purge_dups minimap2 -x map-hifi -t 56 $(flyeOut) $(assemblyHifiReads) | gzip -c > $(purgeDupsMappedReads)
+
+purgeDupsCovStats=$(purgeDupsOutDir)/PB.stat
+
+$(purgeDupsCovStats): $(purgeDupsMappedReads)
+	conda run --no-capture-output -n rssw-purge_dups pbcstat -O $(purgeDupsOutDir) $(purgeDupsMappedReads)
+
+purgeDupsCutoffs=$(purgeDupsOutDir)/cutoffs
+
+$(purgeDupsCutoffs): $(purgeDupsCovStats)
+	conda run --no-capture-output -n rssw-purge_dups calcuts $(purgeDupsCovStats) > $(purgeDupsCutoffs)
+
+purgeDupsSplitAssembly=$(purgeDupsOutDir)/$(notdir $(flyeOut)).split
+
+$(purgeDupsSplitAssembly): $(flyeOut)
+	conda run --no-capture-output -n rssw-purge_dups split_fa $(flyeOut) > $(purgeDupsSplitAssembly)
+
+purgeDupsSelfAlignment=$(purgeDupsSplitAssembly).self.paf.gz
+
+$(purgeDupsSelfAlignment): $(purgeDupsSplitAssembly)
+	conda run --no-capture-output -n rssw-purge_dups minimap2 -x asm5 -t 56 $(purgeDupsSplitAssembly) $(purgeDupsSplitAssembly) | gzip -c > $(purgeDupsSelfAlignment)
+
+purgeDupsBedOut=$(purgeDupsOutDir)/dups.bed
+
+$(purgeDupsBedOut): $(purgeDupsSelfAlignment) $(purgeDupsCutoffs)
+	conda run --no-capture-output -n rssw-purge_dups purge_dups -2 -T $(purgeDupsCutoffs) -c $(purgeDupsOutDir)/PB.base.cov $(purgeDupsSelfAlignment) > $(purgeDupsBedOut)
+
+# The final step, get_seqs produces 2 fasta files: purged.fa and hap.fa. Annoyingly this always get put into the working dir
+# so we will want to link them into the purge_dups output dir. 
+
+purged.fa: $(purgeDupsBedOut) $(flyeOut)
+	conda run --no-capture-output -n rssw-purge_dups get_seqs -e $(purgeDupsBedOut) $(flyeOut)
+
+purgeDupsOutFiles=$(purgeDupsOutDir)/purged.fa $(purgeDupsOutDir)/hap.fa
+
+$(purgeDupsOutFiles): purged.fa
+	ln $(notdir $@) $@
+
+.PHONY: deduplicate-purge_dups
+
+deduplicate-purge_dups: $(purgeDupsOutFiles)
