@@ -89,3 +89,24 @@ If redundans has done what we hope it has, the reduction in genome size should r
 	2124	Total BUSCO groups searched
 
 This is not quite as big an improvement as I had hoped, in particular I would have liked to see more BUSCOs shift from the duplicated to the the single copy category.
+
+## Deduplication of flye assembly with purge_dups
+
+Another tool that others have had success using to deduplice insect genomes is `purge_dups`. Lets give that a try as well
+
+Basis stats from the purged assembly:
+
+	stats for flyePurgeDups/purged.fa
+	sum = 1971099261, n = 36153, ave = 54521.04, largest = 1740295
+	N50 = 106584, n = 4528
+	N60 = 79419, n = 6680
+	N70 = 57299, n = 9603
+	N80 = 39236, n = 13785
+	N90 = 24747, n = 20071
+	N100 = 12, n = 36153
+	N_count = 8800
+	Gaps = 88
+
+On the face of it, `purge_dups` has not done as good a job as `redundans`. Purged assembly is larger than the known assembly size, and we have more contigs and lower N50. Nevertheless, we will run a BUSCO analysis to check that the poorer basic stats aren't hiding a better peformance in reducing gene duplication.
+
+
