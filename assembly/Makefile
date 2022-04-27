@@ -164,3 +164,14 @@ $(purgeDupsOutFiles): purged.fa
 .PHONY: deduplicate-purge_dups
 
 deduplicate-purge_dups: $(purgeDupsOutFiles)
+
+# get assembly stats for the purged assembly, also get the for the haplotigs while we are at it
+
+flyePurgeDupsAsmStats=$(addsuffix .stats,$(purgeDupsOutFiles))
+
+$(flyePurgeDupsAsmStats): $(purgeDupsOutFiles)
+	conda run -n rssw-assemblyStats assembly-stats $(subst .stats,,$@) > $@
+
+.PHONY: flyePurgeDupsAsm-stats
+
+flyePurgeDupsAsm-stats: $(flyePurgeDupsAsmStats)
