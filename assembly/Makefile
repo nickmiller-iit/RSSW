@@ -175,3 +175,21 @@ $(flyePurgeDupsAsmStats): $(purgeDupsOutFiles)
 .PHONY: flyePurgeDupsAsm-stats
 
 flyePurgeDupsAsm-stats: $(flyePurgeDupsAsmStats)
+
+# run BUSCO on the purge_dups assembly, for comparison with others.
+
+
+purgeDupsAsm=$(filter %purged.fa,$(purgeDupsOutFiles)) # just the purged assembly
+
+BUSCOFlyePurgeDupsOutDir=busco_flyePurgeDups
+
+BUSCOFlyePurgeDupsOutFile=$(BUSCOFlyePurgeDupsOutDir)/run_$(BUSCOLineage)/full_table.tsv
+
+BUSCOOpts= --mode genome --augustus --long --lineage $(BUSCOLineage) --cpu 56
+
+$(BUSCOFlyePurgeDupsOutFile): $(purgeDupsOutFiles)
+	conda run --no-capture-output -n rssw-busco busco -i $(purgeDupsAsm) $(BUSCOOpts) --out $(BUSCOFlyePurgeDupsOutDir)
+
+.PHONY: busco-analysis-flyePurgeDups
+
+busco-analysis-flyePurgeDups: $(BUSCOFlyePurgeDupsOutFile)
