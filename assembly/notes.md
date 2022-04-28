@@ -109,4 +109,14 @@ Basis stats from the purged assembly:
 
 On the face of it, `purge_dups` has not done as good a job as `redundans`. Purged assembly is larger than the known assembly size, and we have more contigs and lower N50. Nevertheless, we will run a BUSCO analysis to check that the poorer basic stats aren't hiding a better peformance in reducing gene duplication.
 
+Results of BUSCO:
 
+	C:64.1%[S:54.7%,D:9.4%],F:6.1%,M:29.8%,n:2124
+	1362	Complete BUSCOs (C)
+	1162	Complete and single-copy BUSCOs (S)
+	200	Complete and duplicated BUSCOs (D)
+	129	Fragmented BUSCOs (F)
+	633	Missing BUSCOs (M)
+	2124	Total BUSCO groups searched
+
+Comparison for BUSCO analysis is more or less in keeping with comparison for basic assembly stats. Redundans appears to have done a slightly better job in terms of duplicated BUSCOs, although purge_dups has slightly better numbers for fragmented and missing BUSCOs.
