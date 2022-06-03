@@ -1,0 +1,7 @@
+name: rssw_diamond
+channels:
+ - conda-forge
+ - bioconda
+dependencies:
+ - diamond=2.0.15
+ - boost-cpp=1.74.0
