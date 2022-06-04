@@ -25,6 +25,8 @@ $(UniRef90Diamond): $(UniRef90Download)
 
 uniref90db: $(UniRef90Diamond)
 
+# TaxIDs file for UniRef90
+
 UniRef90TaxIDs=$(UniProtDir)/uniref90.txid
 
 
@@ -35,3 +37,20 @@ $(UniRef90TaxIDs): $(UniRef90Download)
 .PHONY: uniref90txids
 
 uniref90txids: $(UniRef90TaxIDs)
+
+# NodesDB File - can be shared by databases
+
+NCBITaxDump=taxdump.tar.gz
+
+$(NCBITaxDump):
+	wget -O $(NCBITaxDump) ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz
+
+.PHONY: dltaxdump
+
+dltaxdump: $(NCBITaxDump)
+
+# taxdump tarball contains a bunch of files, we need nodes.dmp and names.dmp. Use nodes.dmp as the target
+
+nodes.dmp: $(NCBITaxDump)
+	tar xzvf $(NCBITaxDump)
+

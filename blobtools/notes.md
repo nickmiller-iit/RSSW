@@ -13,3 +13,22 @@ The main thing we want from blobtools is to detect contigs that are obvious cont
 ### Taxid files
 
 Blobtools can add taxonomic infor to the results of a diamond or blast search. It needs a tsv file with mappings between sequence IDs ans NCBI taxonomy numbers. Fortunately, the UniRef 90 sequence headers include a field `TaxID=`, which gives the NCBI taxonomy.
+
+### NodesDB File
+
+From https://blobtools.readme.io/docs/taxonomy-database
+
+*"A nodesDB file is a "condensed" version of NCBI's nodes.dmp and names.dmp files and faster to parse."*
+
+*"
+
+Format
+
+ - A header indicating the number of nodes, followed by TAB-separated lines containing
+ - TaxID of node
+ - Taxonomic rank of node
+ - Name of node
+ - TaxID of parent node
+ 
+"*
+
