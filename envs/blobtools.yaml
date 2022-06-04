@@ -1,0 +1,5 @@
+name: rssw-blobtools
+channels:
+ - bioconda
+dependencies:
+ - blobtools=1.1.1
