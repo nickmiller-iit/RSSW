@@ -54,3 +54,13 @@ dltaxdump: $(NCBITaxDump)
 nodes.dmp: $(NCBITaxDump)
 	tar xzvf $(NCBITaxDump)
 
+# NodesDB file. Simplified consolidation of nodes.dmp and names.dmp
+
+nodesDB=nodes.db
+
+$(nodesDB): nodes.dmp
+	cat mknodesdb.sql | sqlite3 -batch | tr -s "\t" > $(nodesDB)
+
+.PHONY: nodesdb
+
+nodesdb: $(nodesDB)
