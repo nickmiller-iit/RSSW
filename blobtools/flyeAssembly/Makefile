@@ -94,3 +94,19 @@ $(superkingdomBlobPlot): $(blobDBFile)
 .PHONY: blobplots
 
 blobplots: $(phylumBlobPlot) $(superkingdomBlobPlot)
+
+#tabulated results by contig
+
+phylumBlobTable=phylum.$(notdir $(targetAssembly)).blobDB.table.txt
+
+$(phylumBlobTable): $(blobDBFile)
+	conda run --no-capture-output -n rssw-blobtools blobtools view -i $(blobDBFile) --rank phylum -o phylum
+
+superkingdomBlobTable=superkingdom.$(notdir $(targetAssembly)).blobDB.table.txt
+
+$(superkingdomBlobTable): $(blobDBFile)
+	conda run --no-capture-output -n rssw-blobtools blobtools view -i $(blobDBFile) --rank superkingdom -o superkingdom
+
+.PHONY: blobtables
+
+blobtables: $(phylumBlobTable) $(superkingdomBlobTable)

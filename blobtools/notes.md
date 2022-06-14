@@ -14,7 +14,7 @@ The main thing we want from blobtools is to detect contigs that are obvious cont
 
 Blobtools can add taxonomic infor to the results of a diamond or blast search. It needs a tsv file with mappings between sequence IDs ans NCBI taxonomy numbers. Fortunately, the UniRef 90 sequence headers include a field `TaxID=`, which gives the NCBI taxonomy.
 
-### NodesDB File
+## NodesDB File
 
 From https://blobtools.readme.io/docs/taxonomy-database
 
@@ -32,3 +32,16 @@ Format
  
 "*
 
+Used sqlite3 to merge the required columns from nodes.dmp and names.dmp
+
+It turns out that thus is not actually needed - blobtools can use the nodes.dmp and names.dmp files directly, and the file I made could not be parsed.
+
+## Analysis of initial flye assembly
+
+Blobplots at the phylum and superkingdom:
+
+![phylum blobplot](flyeAssembly/assembly.fasta.phylum.png)
+
+![superkingdom blobplot](flyeAssembly/assembly.fasta.superkingdom.png)
+
+So we do have some contamination, which is not surprising, mostly from bacteria and "undefined" taxa. There isn't much obvious clustering, except for some bacterial contigs that have slightly lower GC content. We cant really filter out contamiants based on coverage or GC, but we can probably still do it based on taxonomic assignment.
