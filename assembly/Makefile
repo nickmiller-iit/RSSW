@@ -193,3 +193,70 @@ $(BUSCOFlyePurgeDupsOutFile): $(purgeDupsOutFiles)
 .PHONY: busco-analysis-flyePurgeDups
 
 busco-analysis-flyePurgeDups: $(BUSCOFlyePurgeDupsOutFile)
+
+
+# Decontaminate the initial flye assembly using information from blobtools.
+
+flyeDeconDir=flyeDecon
+
+$(flyeDeconDir):
+	if [ ! -d $(flyeDeconDir) ]; then mkdir $(flyeDeconDir); fi
+
+blobTable=../blobtools/flyeAssembly/superkingdom.assembly.fasta.blobDB.table.txt
+
+deconContigs=$(flyeDeconDir)/contigs.list
+
+$(deconContigs): $(blobTable) | $(flyeDeconDir)
+	grep "Eukaryota" $(blobTable) > $(flyeDeconDir)/tmp
+	grep "no-hit" $(blobTable) >> $(flyeDeconDir)/tmp
+	cut -f1 $(flyeDeconDir)/tmp > $(deconContigs)
+	rm $(flyeDeconDir)/tmp
+
+.PHONY: decon-contigs
+
+decon-contigs: $(deconContigs)
+
+##use samtools faidx to extract non-contaminant contigs
+
+flyeOutIdx=$(flyeOut).fai
+
+$(flyeOutIdx): $(flyeOut)
+	conda run --no-capture-output -n rssw-samtools samtools faidx $(flyeOut)
+
+deconOut=$(flyeDeconDir)/assemblyDecon.fasta
+
+$(deconOut): $(flyeOut) $(flyeOutIdx) $(deconContigs)
+	for ctg in `cat $(deconContigs)`; do \
+		conda run --no-capture-output -n rssw-samtools samtools faidx $(flyeOut) $$ctg >> $(deconOut); \
+	done
+
+.PHONY: decon
+
+decon: $(deconOut)
+
+## Assembly stats for decontamianted assembly
+
+flyeDeconStatsFile=$(flyeDeconDir)/assembly.stats
+
+$(flyeDeconStatsFile): $(deconOut)
+	conda run -n rssw-assemblyStats assembly-stats $(deconOut) > $(flyeDeconStatsFile)
+
+.PHONY: flyedecon-stats
+
+flyedecon-stats: $(flyeDeconStatsFile)
+
+## BUSCO analysis for decontaminated assembly
+
+BUSCOFlyeDeconOutDir=busco_flyeDecon
+
+BUSCOFlyeDeconOutFile=$(BUSCOFlyeDeconOutDir)/run_$(BUSCOLineage)/full_table.tsv
+
+BUSCOOpts= --mode genome --augustus --long --lineage $(BUSCOLineage) --cpu 56
+
+$(BUSCOFlyeDeconOutFile): $(deconOut)
+	conda run --no-capture-output -n rssw-busco busco -i $(deconOut) $(BUSCOOpts) --out $(BUSCOFlyeDeconOutDir)
+
+.PHONY: busco-analysis-flyedecon
+
+busco-analysis-flyedecon: $(BUSCOFlyeDeconOutFile) 
+

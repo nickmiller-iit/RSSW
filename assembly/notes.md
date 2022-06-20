@@ -120,3 +120,39 @@ Results of BUSCO:
 	2124	Total BUSCO groups searched
 
 Comparison for BUSCO analysis is more or less in keeping with comparison for basic assembly stats. Redundans appears to have done a slightly better job in terms of duplicated BUSCOs, although purge_dups has slightly better numbers for fragmented and missing BUSCOs.
+
+
+## Removing contaminants
+
+A blobtools analysis of the initial flye assembly identifed a number of contaminanting contigs - mostly from bacteria and "undefined" taxonomic groups. We certainly don't want these in the final assembly, and it probably makes sense to get rid of them early.
+
+Got the contig IDs for contigs labeled as eukaryote or "no hit" from the blobtools output, and extracted the corresponding contigs from the initial flye assembly.
+
+Basic stats for the decontaminated assembly
+
+	stats for flyeDecon/assemblyDecon.fasta
+	sum = 2061145726, n = 47311, ave = 43565.89, largest = 1740295
+	N50 = 98485, n = 5009
+	N60 = 71893, n = 7467
+	N70 = 49350, n = 10925
+	N80 = 33245, n = 16003
+	N90 = 19755, n = 23969
+	N100 = 12, n = 47311
+	N_count = 8800
+	Gaps = 88
+
+On the face of it, removing contaminant contigs has not changed very much. This is goo, in the sense that there was not a lot of contamination in the initial assembly. On the other hand, I was hoping that some of the duplicated BUSCOs might be due to contamination. Although that seems unlikely, it is still worth checking.
+
+BUSCO results for endoterygote lineage are:
+
+	C:63.7%[S:53.8%,D:9.9%],F:6.1%,M:30.2%,n:2124
+	1353	Complete BUSCOs (C)
+	1143	Complete and single-copy BUSCOs (S)
+	210	Complete and duplicated BUSCOs (D)
+	130	Fragmented BUSCOs (F)
+	641	Missing BUSCOs (M)
+	2124	Total BUSCO groups searched
+
+As suspected, removing contaminants has not done very much. Nevertheless, it needed to be done at some stage in the assembly process.
+
+Next step is to try and get rid of redundant haplotigs using the decontaminated initial assembly as a starting point
