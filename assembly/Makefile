@@ -71,128 +71,88 @@ $(BUSCOFlyeOutFile): $(flyeOut)
 
 busco-analysis-flye: $(BUSCOFlyeOutFile) 
 
-# Use redundans to remove redundant contigs due to pooled input DNA
-redundansOutDir=flyeRedundans
-
-redundansOutput=$(redundansOutDir)/scaffolds.reduced.fa
-
-redundansOpts=--threads 54 --mem 128 --outdir $(redundansOutDir)
-
-$(redundansOutput): $(flyeOut)
-	conda run --no-capture-output -n rssw-redundans redundans.py $(redundansOpts) -f $(flyeOut)
-
-.PHONY: deduplicate
-
-deduplicate: $(redundansOutput)
-
-# Basic stats for assembly deduplicated with redundans
-
-flyeRedundansAsmStatsFile=$(redundansOutDir)/assembly.stats
-
-$(flyeRedundansAsmStatsFile): $(redundansOutput)
-	conda run -n rssw-assemblyStats assembly-stats $(redundansOutput) > $(flyeRedundansAsmStatsFile)
-
-.PHONY: flyeRedundansAsm-stats
-
-flyeRedundansAsm-stats: $(flyeRedundansAsmStatsFile)
-
-
-# BUSCO analysis of the flye assembly deduplicated with redundans
-
-BUSCOFlyeRedundansOutDir=busco_flyeRedundans
-
-BUSCOFlyeRedundansOutFile=$(BUSCOFlyeRedundansOutDir)/run_$(BUSCOLineage)/full_table.tsv
-
-BUSCOOpts= --mode genome --augustus --long --lineage $(BUSCOLineage) --cpu 56
-
-$(BUSCOFlyeRedundansOutFile): $(redundansOutput)
-	conda run --no-capture-output -n rssw-busco busco -i $(redundansOutput) $(BUSCOOpts) --out $(BUSCOFlyeRedundansOutDir)
-
-.PHONY: busco-analysis-flyeRedundans
-
-busco-analysis-flyeRedundans: $(BUSCOFlyeRedundansOutFile) 
 
 # As an alternative to redundans, try purge_dups.
 
-purgeDupsOutDir=flyePurgeDups
+# purgeDupsOutDir=flyePurgeDups
 
 
-$(purgeDupsOutDir):
-	if [ ! -d $(purgeDupsOutDir) ]; then mkdir $(purgeDupsOutDir); fi
+# $(purgeDupsOutDir):
+# 	if [ ! -d $(purgeDupsOutDir) ]; then mkdir $(purgeDupsOutDir); fi
 
-purgeDupsMappedReads=$(purgeDupsOutDir)/$(subst .fastq.gz,.paf.gz,$(notdir $(assemblyHifiReads)))
+# purgeDupsMappedReads=$(purgeDupsOutDir)/$(subst .fastq.gz,.paf.gz,$(notdir $(assemblyHifiReads)))
 
-$(purgeDupsMappedReads): $(flyeOut) $(assemblyHifiReads) | $(purgeDupsOutDir)
-	conda run --no-capture-output -n rssw-purge_dups minimap2 -x map-hifi -t 56 $(flyeOut) $(assemblyHifiReads) | gzip -c > $(purgeDupsMappedReads)
+# $(purgeDupsMappedReads): $(flyeOut) $(assemblyHifiReads) | $(purgeDupsOutDir)
+# 	conda run --no-capture-output -n rssw-purge_dups minimap2 -x map-hifi -t 56 $(flyeOut) $(assemblyHifiReads) | gzip -c > $(purgeDupsMappedReads)
 
-purgeDupsCovStats=$(purgeDupsOutDir)/PB.stat
+# purgeDupsCovStats=$(purgeDupsOutDir)/PB.stat
 
-$(purgeDupsCovStats): $(purgeDupsMappedReads)
-	conda run --no-capture-output -n rssw-purge_dups pbcstat -O $(purgeDupsOutDir) $(purgeDupsMappedReads)
+# $(purgeDupsCovStats): $(purgeDupsMappedReads)
+# 	conda run --no-capture-output -n rssw-purge_dups pbcstat -O $(purgeDupsOutDir) $(purgeDupsMappedReads)
 
-purgeDupsCutoffs=$(purgeDupsOutDir)/cutoffs
+# purgeDupsCutoffs=$(purgeDupsOutDir)/cutoffs
 
-$(purgeDupsCutoffs): $(purgeDupsCovStats)
-	conda run --no-capture-output -n rssw-purge_dups calcuts $(purgeDupsCovStats) > $(purgeDupsCutoffs)
+# $(purgeDupsCutoffs): $(purgeDupsCovStats)
+# 	conda run --no-capture-output -n rssw-purge_dups calcuts $(purgeDupsCovStats) > $(purgeDupsCutoffs)
 
-purgeDupsSplitAssembly=$(purgeDupsOutDir)/$(notdir $(flyeOut)).split
+# purgeDupsSplitAssembly=$(purgeDupsOutDir)/$(notdir $(flyeOut)).split
 
-$(purgeDupsSplitAssembly): $(flyeOut)
-	conda run --no-capture-output -n rssw-purge_dups split_fa $(flyeOut) > $(purgeDupsSplitAssembly)
+# $(purgeDupsSplitAssembly): $(flyeOut)
+# 	conda run --no-capture-output -n rssw-purge_dups split_fa $(flyeOut) > $(purgeDupsSplitAssembly)
 
-purgeDupsSelfAlignment=$(purgeDupsSplitAssembly).self.paf.gz
+# purgeDupsSelfAlignment=$(purgeDupsSplitAssembly).self.paf.gz
 
-$(purgeDupsSelfAlignment): $(purgeDupsSplitAssembly)
-	conda run --no-capture-output -n rssw-purge_dups minimap2 -x asm5 -t 56 $(purgeDupsSplitAssembly) $(purgeDupsSplitAssembly) | gzip -c > $(purgeDupsSelfAlignment)
+# $(purgeDupsSelfAlignment): $(purgeDupsSplitAssembly)
+# 	conda run --no-capture-output -n rssw-purge_dups minimap2 -x asm5 -t 56 $(purgeDupsSplitAssembly) $(purgeDupsSplitAssembly) | gzip -c > $(purgeDupsSelfAlignment)
 
-purgeDupsBedOut=$(purgeDupsOutDir)/dups.bed
+# purgeDupsBedOut=$(purgeDupsOutDir)/dups.bed
 
-$(purgeDupsBedOut): $(purgeDupsSelfAlignment) $(purgeDupsCutoffs)
-	conda run --no-capture-output -n rssw-purge_dups purge_dups -2 -T $(purgeDupsCutoffs) -c $(purgeDupsOutDir)/PB.base.cov $(purgeDupsSelfAlignment) > $(purgeDupsBedOut)
+# $(purgeDupsBedOut): $(purgeDupsSelfAlignment) $(purgeDupsCutoffs)
+# 	conda run --no-capture-output -n rssw-purge_dups purge_dups -2 -T $(purgeDupsCutoffs) -c $(purgeDupsOutDir)/PB.base.cov $(purgeDupsSelfAlignment) > $(purgeDupsBedOut)
 
-# The final step, get_seqs produces 2 fasta files: purged.fa and hap.fa. Annoyingly this always get put into the working dir
-# so we will want to link them into the purge_dups output dir. 
+# # The final step, get_seqs produces 2 fasta files: purged.fa and hap.fa. Annoyingly this always get put into the working dir
+# # so we will want to link them into the purge_dups output dir. 
 
-purged.fa: $(purgeDupsBedOut) $(flyeOut)
-	conda run --no-capture-output -n rssw-purge_dups get_seqs -e $(purgeDupsBedOut) $(flyeOut)
+# purged.fa: $(purgeDupsBedOut) $(flyeOut)
+# 	conda run --no-capture-output -n rssw-purge_dups get_seqs -e $(purgeDupsBedOut) $(flyeOut)
 
-purgeDupsOutFiles=$(purgeDupsOutDir)/purged.fa $(purgeDupsOutDir)/hap.fa
+# purgeDupsOutFiles=$(purgeDupsOutDir)/purged.fa $(purgeDupsOutDir)/hap.fa
 
-$(purgeDupsOutFiles): purged.fa
-	ln $(notdir $@) $@
+# $(purgeDupsOutFiles): purged.fa
+# 	ln $(notdir $@) $@
 
-.PHONY: deduplicate-purge_dups
+# .PHONY: deduplicate-purge_dups
 
-deduplicate-purge_dups: $(purgeDupsOutFiles)
+# deduplicate-purge_dups: $(purgeDupsOutFiles)
 
-# get assembly stats for the purged assembly, also get the for the haplotigs while we are at it
+# # get assembly stats for the purged assembly, also get the for the haplotigs while we are at it
 
-flyePurgeDupsAsmStats=$(addsuffix .stats,$(purgeDupsOutFiles))
+# flyePurgeDupsAsmStats=$(addsuffix .stats,$(purgeDupsOutFiles))
 
-$(flyePurgeDupsAsmStats): $(purgeDupsOutFiles)
-	conda run -n rssw-assemblyStats assembly-stats $(subst .stats,,$@) > $@
+# $(flyePurgeDupsAsmStats): $(purgeDupsOutFiles)
+# 	conda run -n rssw-assemblyStats assembly-stats $(subst .stats,,$@) > $@
 
-.PHONY: flyePurgeDupsAsm-stats
+# .PHONY: flyePurgeDupsAsm-stats
 
-flyePurgeDupsAsm-stats: $(flyePurgeDupsAsmStats)
+# flyePurgeDupsAsm-stats: $(flyePurgeDupsAsmStats)
 
-# run BUSCO on the purge_dups assembly, for comparison with others.
+# # run BUSCO on the purge_dups assembly, for comparison with others.
 
 
-purgeDupsAsm=$(filter %purged.fa,$(purgeDupsOutFiles)) # just the purged assembly
+# purgeDupsAsm=$(filter %purged.fa,$(purgeDupsOutFiles)) # just the purged assembly
 
-BUSCOFlyePurgeDupsOutDir=busco_flyePurgeDups
+# BUSCOFlyePurgeDupsOutDir=busco_flyePurgeDups
 
-BUSCOFlyePurgeDupsOutFile=$(BUSCOFlyePurgeDupsOutDir)/run_$(BUSCOLineage)/full_table.tsv
+# BUSCOFlyePurgeDupsOutFile=$(BUSCOFlyePurgeDupsOutDir)/run_$(BUSCOLineage)/full_table.tsv
 
-BUSCOOpts= --mode genome --augustus --long --lineage $(BUSCOLineage) --cpu 56
+# BUSCOOpts= --mode genome --augustus --long --lineage $(BUSCOLineage) --cpu 56
 
-$(BUSCOFlyePurgeDupsOutFile): $(purgeDupsOutFiles)
-	conda run --no-capture-output -n rssw-busco busco -i $(purgeDupsAsm) $(BUSCOOpts) --out $(BUSCOFlyePurgeDupsOutDir)
+# $(BUSCOFlyePurgeDupsOutFile): $(purgeDupsOutFiles)
+# 	conda run --no-capture-output -n rssw-busco busco -i $(purgeDupsAsm) $(BUSCOOpts) --out $(BUSCOFlyePurgeDupsOutDir)
 
-.PHONY: busco-analysis-flyePurgeDups
+# .PHONY: busco-analysis-flyePurgeDups
 
-busco-analysis-flyePurgeDups: $(BUSCOFlyePurgeDupsOutFile)
+# busco-analysis-flyePurgeDups: $(BUSCOFlyePurgeDupsOutFile)
 
 
 # Decontaminate the initial flye assembly using information from blobtools.
@@ -260,3 +220,44 @@ $(BUSCOFlyeDeconOutFile): $(deconOut)
 
 busco-analysis-flyedecon: $(BUSCOFlyeDeconOutFile) 
 
+# Use redundans to remove redundant contigs from decontamiated flye assembly due to pooled input DNA
+
+redundansOutDir=flyeRedundans
+
+redundansOutput=$(redundansOutDir)/scaffolds.reduced.fa
+
+redundansOpts=--threads 54 --mem 128 --outdir $(redundansOutDir)
+
+$(redundansOutput): $(deconOut)
+	conda run --no-capture-output -n rssw-redundans redundans.py $(redundansOpts) -f $(deconOut)
+
+.PHONY: deduplicate
+
+deduplicate: $(redundansOutput)
+
+# Basic stats for assembly deduplicated with redundans
+
+flyeRedundansAsmStatsFile=$(redundansOutDir)/assembly.stats
+
+$(flyeRedundansAsmStatsFile): $(redundansOutput)
+	conda run -n rssw-assemblyStats assembly-stats $(redundansOutput) > $(flyeRedundansAsmStatsFile)
+
+.PHONY: flyeRedundansAsm-stats
+
+flyeRedundansAsm-stats: $(flyeRedundansAsmStatsFile)
+
+
+# BUSCO analysis of the flye assembly deduplicated with redundans
+
+BUSCOFlyeRedundansOutDir=busco_flyeRedundans
+
+BUSCOFlyeRedundansOutFile=$(BUSCOFlyeRedundansOutDir)/run_$(BUSCOLineage)/full_table.tsv
+
+BUSCOOpts= --mode genome --augustus --long --lineage $(BUSCOLineage) --cpu 56
+
+$(BUSCOFlyeRedundansOutFile): $(redundansOutput)
+	conda run --no-capture-output -n rssw-busco busco -i $(redundansOutput) $(BUSCOOpts) --out $(BUSCOFlyeRedundansOutDir)
+
+.PHONY: busco-analysis-flyeRedundans
+
+busco-analysis-flyeRedundans: $(BUSCOFlyeRedundansOutFile) 

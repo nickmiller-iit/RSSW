@@ -155,4 +155,22 @@ BUSCO results for endoterygote lineage are:
 
 As suspected, removing contaminants has not done very much. Nevertheless, it needed to be done at some stage in the assembly process.
 
-Next step is to try and get rid of redundant haplotigs using the decontaminated initial assembly as a starting point
+# Deduplication of decontaminated inital assembly
+
+Next step is to try and get rid of redundant haplotigs using the decontaminated initial assembly as a starting point. Redundans did pretty well before, so used that.
+
+Basic assembly stats for scaffolds.reduced.fa
+
+	sum = 1826669513, n = 28643, ave = 63773.68, largest = 1740295
+	N50 = 115391, n = 3981
+	N60 = 86122, n = 5823
+	N70 = 63415, n = 8290
+	N80 = 43976, n = 11755
+	N90 = 28250, n = 16924
+	N100 = 476, n = 28643
+	N_count = 7600
+	Gaps = 76
+
+
+
+
