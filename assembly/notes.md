@@ -141,7 +141,7 @@ Basic stats for the decontaminated assembly
 	N_count = 8800
 	Gaps = 88
 
-On the face of it, removing contaminant contigs has not changed very much. This is goo, in the sense that there was not a lot of contamination in the initial assembly. On the other hand, I was hoping that some of the duplicated BUSCOs might be due to contamination. Although that seems unlikely, it is still worth checking.
+On the face of it, removing contaminant contigs has not changed very much. This is good, in the sense that there was not a lot of contamination in the initial assembly. On the other hand, I was hoping that some of the duplicated BUSCOs might be due to contamination. Although that seems unlikely, it is still worth checking.
 
 BUSCO results for endoterygote lineage are:
 
@@ -172,5 +172,34 @@ Basic assembly stats for scaffolds.reduced.fa
 	Gaps = 76
 
 
+The above redundans run did not use any read data for scaffolding. Out of curiosity, decided to re-run using the HiFi reads used in teh original assembly for scaffolding. This is slow, took about 6 days to run.
 
+However, it does appear to have had a substantial impact on the assembly
 
+	sum = 1577197296, n = 12261, ave = 128635.29, largest = 6008835
+	N50 = 452285, n = 791
+	N60 = 301676, n = 1219
+	N70 = 195711, n = 1869
+	N80 = 108685, n = 2960
+	N90 = 48998, n = 5137
+	N100 = 476, n = 12261
+	N_count = 10184139
+	Gaps = 13535
+
+Total assembly is reduced to 1.58 Gb, this si smaller than the genome size, but could be due to collapsing some repeats. Total number of contigs with read scaffolding is less than half the number without it, and N50 is almost quadrupled.
+
+## BUSCO analysis of deduplicated, decontaminated assembly
+
+Given the substantial impact on assembly stats of including the long reads for scaffolding, it would be worthwhile seeing if there is an impact on BUSCO results, especially with repsect to duplicated BUSCOs.
+
+	C:58.5%[S:52.5%,D:6.0%],F:5.9%,M:35.6%,n:2124
+	1243	Complete BUSCOs (C)
+	1116	Complete and single-copy BUSCOs (S)
+	127	Complete and duplicated BUSCOs (D)
+	125	Fragmented BUSCOs (F)
+	756	Missing BUSCOs (M)
+	2124	Total BUSCO groups searched
+
+This has made some difference compared to the decontaminated primary assembly. We have got rid of 83 duplicated BUSCOs, bring the percent duplicated down to 6%, which is more acceptable. On the other hand, we have added 115 missing BUSCOs. It looks like the removed duplicated BUSCOs have been lost from the assembly (along with some somplete single copy BUSCOs), rather than being converted to single copy.
+
+So now we need to think about whether we prefer assembly with more complete BUSCOs, but higher duplication, or the one with fewer complete BUSCOs, but less duplication. 
