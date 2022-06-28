@@ -226,7 +226,7 @@ redundansOutDir=flyeRedundans
 
 redundansOutput=$(redundansOutDir)/scaffolds.reduced.fa
 
-redundansOpts=--threads 54 --mem 128 --outdir $(redundansOutDir)
+redundansOpts=--threads 54 --mem 128 --longreads $(assemblyHifiReads) --outdir $(redundansOutDir)
 
 $(redundansOutput): $(deconOut)
 	conda run --no-capture-output -n rssw-redundans redundans.py $(redundansOpts) -f $(deconOut)
