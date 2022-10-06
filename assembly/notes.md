@@ -61,10 +61,36 @@ For comparison, trying a different assembler. Hifiasm is quick and has a been us
 
 Unfortunately my first attempt to run hifiasm failed. Because this was run via `conda run` and `make` it is not obvious what went wrong. Might come back to this later.
 
+Update 5th Oct 2022: Did get hifiasm to run, but did so outside of Makefile etc as a test. It took 8 days, basic assembly stats were
+
+	sum = 1360509092, n = 38974, ave = 34908.12, largest = 482041
+	N50 = 39310, n = 10554
+	N60 = 33998, n = 14281
+	N70 = 29673, n = 18565
+	N80 = 25555, n = 23496
+	N90 = 20521, n = 29385
+	N100 = 3151, n = 38974
+	N_count = 0
+	Gaps = 0
+
+So, on the face of it, not as good as the flye assembly - we are missing about 500Mb of the genome and the N50 is lower. Suspect this is because hifiasm makes quite strong assumptions that the organism is diploid, and we have decent coverage. In our case we have a pool of individuals and low coverage.
+
+Just to be sure, ran a BUSCO analysis with the same params as for the initial flye assembly.
+
+	C:37.6%[S:31.5%,D:6.1%],F:11.0%,M:51.4%,n:2124
+	800	Complete BUSCOs (C)
+	670	Complete and single-copy BUSCOs (S)
+	130	Complete and duplicated BUSCOs (D)
+	234	Fragmented BUSCOs (F)
+	1090	Missing BUSCOs (M)
+	2124	Total BUSCO groups searched
+
+
+This is substantially worse.
 
 ## Deduplication of flye assembly with redundans
 
-Since we appear to have some "excess" sequence in our genome, try to get rid of redundant haplotigs with `redundans`. As and aside, I also tried `purge_haplotigs` but it was bahaving oddly. After running redundans with just the flye assembly as input, we get the following assembly stats.
+Since we appear to have some "excess" sequence in our genome, try to get rid of redundant haplotigs with `redundans`. As and aside, I also tried `purge_haplotigs` but it was behaving oddly. After running redundans with just the flye assembly as input, we get the following assembly stats.
 
 	sum = 1844871505, n = 28898, ave = 63840.80, largest = 1740295
 	N50 = 115390, n = 4020
