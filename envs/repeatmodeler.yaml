@@ -1,0 +1,6 @@
+name: rssw-repeatmodeler
+channels:
+ - conda-forge
+ - bioconda
+dependencies:
+ - repeatmodeler=2.0.3 
