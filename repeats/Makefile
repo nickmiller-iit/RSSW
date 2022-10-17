@@ -22,8 +22,8 @@ buildDBNoScaff: $(dbNoScaffHeader)
 # Run Repeatmodeler on the database
 
 # Repeatmodeler produces several output files, named after the input database.
-# Use the "Stockholm" format output as the target
-repeatModelerNoScaffOutFile=$(dbNoScaff)-families.stk
+# Use the FASTA format output as the target
+repeatModelerNoScaffOutFile=$(dbNoScaff)-families.fa
 
 $(repeatModelerNoScaffOutFile): $(dbNoScaffHeader)
 	conda run --no-capture-output -n rssw-repeatmodeler RepeatModeler -pa 10 -LTRStruct -database $(dbNoScaff)
@@ -31,3 +31,45 @@ $(repeatModelerNoScaffOutFile): $(dbNoScaffHeader)
 .PHONY: repeatModelerNoScaff
 
 repeatModelerNoScaff: $(repeatModelerNoScaffOutFile)
+
+# Run repeat masker using the repeats identified by repeatmasker
+
+# Produces various output files, use the .masked file as the target
+
+repeatMaskerNoScaffOutDir=maskedNoScaff
+
+$(repeatMaskerNoScaffOutDir):
+	if [ ! -d $(repeatMaskerNoScaffOutDir) ]; then mkdir $(repeatMaskerNoScaffOutDir); fi
+
+repeatMaskerNoScaffOut=$(repeatMaskerNoScaffOutDir)/$(notdir $(assemblyNoScaff)).masked
+
+$(repeatMaskerNoScaffOut): $(repeatModelerNoScaffOutFile) | $(repeatMaskerNoScaffOutDir)
+	conda run --no-capture-output -n rssw-repeatmasker RepeatMasker -lib $(repeatModelerNoScaffOutFile) -dir $(repeatMaskerNoScaffOutDir) -par 28 -gff $(assemblyNoScaff)
+
+.PHONY: maskNoScaff
+
+maskNoScaff: $(repeatMaskerNoScaffOut)
+
+maskedNoScaffStats=$(repeatMaskerNoScaffOutDir)/stats.txt
+
+$(maskedNoScaffStats): $(repeatMaskerNoScaffOut)
+	conda run -n rssw-assemblyStats assembly-stats $(repeatMaskerNoScaffOut) > $(maskedNoScaffStats)
+
+.PHONY: stats
+
+stats: $(maskedNoScaffStats)
+
+BUSCOLineage=endopterygota_odb10
+
+BUSCONoScaffOutDir=busco_NoScaff
+
+BUSCONoScaffOutFile=$(BUSCONoScaffOutDir)/run_$(BUSCOLineage)/full_table.tsv
+
+BUSCOOpts= --mode genome --augustus --long --lineage $(BUSCOLineage) --cpu 56
+
+$(BUSCONoScaffOutFile): $(repeatMaskerNoScaffOut)
+	conda run --no-capture-output -n rssw-busco busco -i $(repeatMaskerNoScaffOut) $(BUSCOOpts) --out $(BUSCONoScaffOutDir)
+
+.PHONY: busco-analysis-noScaff
+
+busco-analysis-noScaff: $(BUSCONoScaffOutFile)
