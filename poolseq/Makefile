@@ -116,3 +116,44 @@ $(trimmedQCFiles): $(allTrimmedReads) | $(trimmedQCDir)
 .PHONY: qcTrimmed
 
 qcTrimmed: $(trimmedQCFiles)
+
+# Read alignment
+
+alignDir=alignments
+
+$(alignDir):
+	if [ ! -d $(alignDir) ]; then mkdir $(alignDir); fi
+
+
+# Use the same assembly that we used for repeat masking
+
+genomeRef=../assembly/flyeRedundansNoReads/scaffolds.reduced.fa
+
+alignments=$(addprefix $(alignDir)/,B.bam D.bam H.bam K.bam L.bam O.bam S.bam T.bam)
+
+## Alignment step does several things
+## 1. Align with minimap (sam output)
+## 2. Run samtools fixmates on initial alignment
+## 3. Sort by coordinate and output to temporary bam file
+## 4. Mark and remove PCR duplicates
+## 5. Remove temporary bam file
+minimapOpts= -t 6
+
+$(alignments): $(genomeRef) $(trimmedRead1) | $(alignDir)
+	conda run --no-capture-output -n rssw-minimap2-samtools minimap2 $(minimapOpts) -ax sr $(genomeRef) $(trimmedReadsDir)/$(filter $(basename $(notdir $@))%,$(notdir $(trimmedRead1)))  $(trimmedReadsDir)/$(filter $(basename $(notdir $@))%,$(notdir $(trimmedRead2))) | conda run --no-capture-output -n rssw-minimap2-samtools samtools view -b - | conda run --no-capture-output -n rssw-minimap2-samtools samtools fixmate -m -O bam - - | conda run --no-capture-output -n rssw-minimap2-samtools samtools sort  > $@.tmp; conda run --no-capture-output -n rssw-minimap2-samtools samtools markdup -r $@.tmp $@; rm $@.tmp
+
+# Index the bam files for
+
+alignmentIndexes=$(addsuffix .bai,$(alignments))
+
+$(alignmentIndexes): $(alignments)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools index $(subst .bai,,$@)
+
+.PHONY: align
+
+align: $(alignmentIndexes)
+
+.PHONY: test
+
+test:
+	echo $(alignmentIndexes)

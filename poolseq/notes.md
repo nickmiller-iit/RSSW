@@ -13,4 +13,4 @@ Sequencing was whole genome shotgun sequencing done by Novogene. Number of read 
 
 Raw reads were quality-trimmed & adaptor clipped using fastp.
 
-Paired read from each location pool were aligned to the assembled genome produced from PacBio Hifi reads using minimap2
+Paired reads from each location pool were aligned to the assembled genome produced from PacBio Hifi reads using minimap2. Used the same assembly that we used for repeat detection and masking (deduplicated with redundans, but no redundans scaffolding). During alignment, PCR duplicates were tagged and removed.
