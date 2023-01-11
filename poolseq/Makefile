@@ -125,7 +125,7 @@ $(alignDir):
 	if [ ! -d $(alignDir) ]; then mkdir $(alignDir); fi
 
 
-# Use the same assembly that we used for repeat masking
+## Use the same assembly that we used for repeat masking
 
 genomeRef=../assembly/flyeRedundansNoReads/scaffolds.reduced.fa
 
@@ -142,7 +142,7 @@ minimapOpts= -t 6
 $(alignments): $(genomeRef) $(trimmedRead1) | $(alignDir)
 	conda run --no-capture-output -n rssw-minimap2-samtools minimap2 $(minimapOpts) -ax sr $(genomeRef) $(trimmedReadsDir)/$(filter $(basename $(notdir $@))%,$(notdir $(trimmedRead1)))  $(trimmedReadsDir)/$(filter $(basename $(notdir $@))%,$(notdir $(trimmedRead2))) | conda run --no-capture-output -n rssw-minimap2-samtools samtools view -b - | conda run --no-capture-output -n rssw-minimap2-samtools samtools fixmate -m -O bam - - | conda run --no-capture-output -n rssw-minimap2-samtools samtools sort  > $@.tmp; conda run --no-capture-output -n rssw-minimap2-samtools samtools markdup -r $@.tmp $@; rm $@.tmp
 
-# Index the bam files for
+## Index the bam files for
 
 alignmentIndexes=$(addsuffix .bai,$(alignments))
 
@@ -153,7 +153,53 @@ $(alignmentIndexes): $(alignments)
 
 align: $(alignmentIndexes)
 
-.PHONY: test
+## Before calling SNPs, clean up the bam files to remove:
+## 1. Reads with low (<= 20) mapping qualities
+## 2. Improperly paired reads (-f 0x2)
+## 3. Reads in known repeats.
 
-test:
-	echo $(alignmentIndexes)
+## Use bedtools to get the regions that are *not* identified by repeatmasker
+
+repeatsGFF=../repeats/maskedNoScaff/scaffolds.reduced.fa.out.gff
+
+nonRepeatsBED=$(alignDir)/noRepeats.bed
+
+### We can make a genome file for bedtools from the first 2 cols of a fai index produced by samtools
+
+genomeRefIndex=$(genomeRef).fai
+
+bedGenome=$(alignDir)/genomeBed
+
+$(bedGenome): $(genomeRefIndex)
+	cut -f1,2 $(genomeRefIndex)  > $(bedGenome)
+
+## Need to have BED file of repeats sorted in the same order as the chroms in the genome file
+## easiest way to do this is with the faidx option.
+
+repeatsBed=$(alignDir)/repeats.bed
+
+$(repeatsBed): $(repeatsGFF)
+	conda run --no-capture-output -n rssw-bedtools bedtools sort -faidx $(genomeRefIndex)  -i $(repeatsGFF) > $(repeatsBed)
+
+$(nonRepeatsBED): $(bedGenome) $(repeatsBed)
+	conda run --no-capture-output -n rssw-bedtools bedtools complement -i $(repeatsBed) -g $(bedGenome) > $(nonRepeatsBED)
+
+
+## Filter out unwanted reads, write to clean.*.bam
+
+cleanAlignments=$(subst $(alignDir)/,$(alignDir)/clean.,$(alignments))
+
+$(cleanAlignments): $(alignments) $(nonRepeatsBED)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools view -b -q 20 -f 0x2 -L $(nonRepeatsBED) $(subst clean.,,$@) > $@
+
+## index cleaned BAM files
+
+cleanAlignmentIndexes=$(addsuffix .bai,$(cleanAlignments))
+
+$(cleanAlignmentIndexes): $(cleanAlignments)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools index $(subst .bai,,$@)
+
+.PHONY: clean-align
+
+clean-align: $(cleanAlignmentIndexes)
+
