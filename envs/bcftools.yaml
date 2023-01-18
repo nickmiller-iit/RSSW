@@ -1,0 +1,6 @@
+name: rssw-bcftools
+channels:
+ - bioconda
+dependencies:
+ - libopenblas 
+ - bcftools=1.11
