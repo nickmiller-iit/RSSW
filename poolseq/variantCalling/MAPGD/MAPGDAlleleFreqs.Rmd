@@ -1,0 +1,225 @@
+---
+title: "MAPGD allele frequencies"
+output:
+  html_document:
+    df_print: paged
+---
+
+We used `MAPGD` to identify polymorphic sites in the pool-seq data and to estimate the frequency of the major allele. As a sanity check let's take a look at the allele frequenct distribution.
+
+The MAPGD ouptut file is gzip compressed. It consists of two major blocks: 1) a list of the contigs and their lengths, 2) a tab separated table consisting of:
+
+ * Scaffold name
+ * Position
+ * Reference base
+ * Major allele base
+ * Minor allele base
+ * Total coverage
+ * Estimated error
+ * *s* columns od results, one column per sample. Fields in the sample results are separated by "/". 
+
+The MAPGD documentation seems to be a bit out of date on the contents of these columns, but the first field is the allele frequency. Which allele is not specified, but it appears to be the reference allele. MAPGD uses `samtools mpileup` output as it's input. Because `mpileup` does not include sample identifiers, there are no sample identifers in the MAPGD output. Samples should bwe in the same order they were given to `mpileup`.
+
+The two major blocks of the output file are separated by comments starting with an "@" character.
+
+# Read in the data.
+
+First w need to figure out where the second block of the oupt file is located. Grep will do this.
+
+```{bash}
+zgrep -n "^@" allpops.mapgd.out.22.gz
+```
+
+So, skip the first 28648 lines.
+
+Read the data from file
+
+
+```{r}
+dat <- read.table(file = gzfile("allpops.mapgd.out.22.gz"),
+                  header = F,
+                  comment.char = "@",
+                  skip = 28648,
+                  col.names = c("scaffold", "position", "ref", "major", "minor", "coverage", "error", "B", "D", "H", "K", "L", "O", "S", "T"))
+```
+
+# Plot Allele frequencies
+
+Use stringr to extract the allele freqs
+```{r}
+library(stringr)
+```
+
+For each site, plot the folded site frequency spectrum for the minor allele. Need `purrr::map2` for that.
+
+```{r}
+library(purrr)
+```
+
+
+
+
+## Site B
+
+Get the minor allele frequency
+
+```{r}
+freqs <- as.numeric(str_split_i(dat$B, "/", 1))
+maf <- unlist(map2(freqs, 1 - freqs, min))
+
+```
+Plot the folded site frequency spectrum
+
+```{r}
+hist(maf,
+     main = "Minor allele frequency",
+     col = "steelblue2")
+```
+
+
+## Site D
+
+Get the minor allele frequency
+
+```{r}
+freqs <- as.numeric(str_split_i(dat$D, "/", 1))
+maf <- unlist(map2(freqs, 1 - freqs, min))
+
+```
+Plot the folded site frequency spectrum
+
+```{r}
+hist(maf,
+     main = "Minor allele frequency",
+     col = "steelblue2")
+```
+
+
+## Site H
+
+Get the minor allele frequency
+
+```{r}
+freqs <- as.numeric(str_split_i(dat$H, "/", 1))
+maf <- unlist(map2(freqs, 1 - freqs, min))
+
+```
+Plot the folded site frequency spectrum
+
+```{r}
+hist(maf,
+     main = "Minor allele frequency",
+     col = "steelblue2")
+```
+
+
+## Site K
+
+Get the minor allele frequency
+
+```{r}
+freqs <- as.numeric(str_split_i(dat$K, "/", 1))
+maf <- unlist(map2(freqs, 1 - freqs, min))
+
+```
+Plot the folded site frequency spectrum
+
+```{r}
+hist(maf,
+     main = "Minor allele frequency",
+     col = "steelblue2")
+```
+
+
+## Site L
+
+Get the minor allele frequency
+
+```{r}
+freqs <- as.numeric(str_split_i(dat$L, "/", 1))
+maf <- unlist(map2(freqs, 1 - freqs, min))
+
+```
+Plot the folded site frequency spectrum
+
+```{r}
+hist(maf,
+     main = "Minor allele frequency",
+     col = "steelblue2")
+```
+
+
+## Site O
+
+Get the minor allele frequency
+
+```{r}
+freqs <- as.numeric(str_split_i(dat$O, "/", 1))
+maf <- unlist(map2(freqs, 1 - freqs, min))
+
+```
+Plot the folded site frequency spectrum
+
+```{r}
+hist(maf,
+     main = "Minor allele frequency",
+     col = "steelblue2")
+```
+
+
+## Site S
+
+Get the minor allele frequency
+
+```{r}
+freqs <- as.numeric(str_split_i(dat$S, "/", 1))
+maf <- unlist(map2(freqs, 1 - freqs, min))
+
+```
+Plot the folded site frequency spectrum
+
+```{r}
+hist(maf,
+     main = "Minor allele frequency",
+     col = "steelblue2")
+```
+
+
+## Site T
+
+Get the minor allele frequency
+
+```{r}
+freqs <- as.numeric(str_split_i(dat$T, "/", 1))
+maf <- unlist(map2(freqs, 1 - freqs, min))
+
+```
+Plot the folded site frequency spectrum
+
+```{r}
+hist(maf,
+     main = "Minor allele frequency",
+     col = "steelblue2")
+```
+
+
+# Conclusion
+
+The folded SFS for each location is very much not what we expect for a neutral process (most alleles are rare). It looks to me like MAPGD is heavily biasing detection to sites with high expected heterozygosity.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

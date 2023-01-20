@@ -186,11 +186,11 @@ $(nonRepeatsBED): $(bedGenome) $(repeatsBed)
 
 
 ## Filter out unwanted reads, write to clean.*.bam
-
+## Also include sample info in read groups, so we know who's who
 cleanAlignments=$(subst $(alignDir)/,$(alignDir)/clean.,$(alignments))
 
 $(cleanAlignments): $(alignments) $(nonRepeatsBED)
-	conda run --no-capture-output -n rssw-minimap2-samtools samtools view -b -q 20 -f 0x2 -L $(nonRepeatsBED) $(subst clean.,,$@) > $@
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools addreplacerg  -r "ID:$(notdir $@)" -r "SM:$(subst clean.,Site,$(basename $(notdir $@)))" $(subst clean.,,$@) | conda run --no-capture-output -n rssw-minimap2-samtools samtools view -b -q 20 -f 0x2 -L $(nonRepeatsBED)  > $@
 
 ## index cleaned BAM files
 
@@ -202,4 +202,81 @@ $(cleanAlignmentIndexes): $(cleanAlignments)
 .PHONY: clean-align
 
 clean-align: $(cleanAlignmentIndexes)
+
+
+
+# Variant calling
+
+
+## Most variant callers start with a samtools pileup/mpileup file.
+
+variantDir=variantCalling
+
+$(variantDir):
+	if [ ! -d $(variantDir) ]; then mkdir $(variantDir); fi
+
+mpileupFile=$(variantDir)/mpileup.out.gz
+
+$(mpileupFile): $(cleanAlignments) $(genomeRef) | $(variantDir)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools mpileup -f $(genomeRef) $(cleanAlignments) | gzip -c > $(mpileupFile)
+
+.PHONY: mpileup
+
+mpileup: $(mpileupFile)
+
+
+## Variant calling with MAPGD
+## MAPGD is not available in conda. Had to build it by hand (requires GSL).
+
+MAPGDBIN=MAPGD/bin/mapgd
+
+## Dir to place the output
+
+MAPGDDir=$(variantDir)/MAPGD
+
+$(MAPGDDir):
+	if [ ! -d $(MAPGDDir) ]; then mkdir $(MAPGDDir); fi
+
+## MAPGD requires a header from samtools to process the mpileup
+
+MAPGDHeader=$(MAPGDDir)/mapgd.header
+
+$(MAPGDHeader): $(cleanAlignments) | $(MAPGDDir)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools view -H $(filter %B.bam,$(cleanAlignments)) > $(MAPGDHeader)
+
+## Next step is to reformat from mpileup to MAPGD .pro format
+## Pro file gets pretty huge, so compress it.
+
+MAPGDProFile=$(MAPGDDir)/allpops.pro.gz
+
+## Samples names can be handed to mapgd proview as a comma separated list.
+## Getting a comma separated list from a makefile variable is surprisingly tricky.
+## Stack overflow to the rescue:
+## https://stackoverflow.com/questions/7525589/create-comma-separated-lists-in-gnu-make
+## Hopefully the order of the samples has not changed with mpileup
+
+null  :=
+space := $(null) #
+comma := ,
+
+## But apparenlty I'm not understanding what MAPGD wants
+
+MAPGDSampleNames := $(subst $(space),$(comma),$(basename $(notdir $(alignments))))
+
+$(MAPGDProFile): $(mpileupFile) $(MAPGDHeader)
+	$(MAPGDBIN) proview -i $(mpileupFile) -H $(MAPGDHeader) | gzip -c > $(MAPGDProFile)
+#	$(MAPGDBIN) proview -i $(mpileupFile) -H $(MAPGDHeader) -l $(MAPGDSampleNames) | gzip -c > $(MAPGDProFile)
+
+
+## MAPGD pool command estimates allele frequencies for pooled dats
+## -a flag controls log likelihood to accept as polymorphic
+
+MAPGDOutFile=$(MAPGDDir)/allpops.mapgd.out.22.gz
+
+$(MAPGDOutFile): $(MAPGDProFile)
+	zcat $(MAPGDProFile) | $(MAPGDBIN) pool -a 22 | gzip -c > $(MAPGDOutFile)
+
+.PHONY: mapgd
+
+mapgd: $(MAPGDOutFile)
 
