@@ -280,3 +280,90 @@ $(MAPGDOutFile): $(MAPGDProFile)
 
 mapgd: $(MAPGDOutFile)
 
+## Variant calling with SNAPE-pooled
+
+
+## SNAPE-pooled only uses the first sample in a mpileup file. since samtools no linger includes the pileup command
+## First use samtools merge, then mpileup.
+## Not samtools merge unusually, defaults to writing to a file. The -o - argument makes output go to stdout.
+
+
+pileupFile=$(variantDir)/pileup.out.gz
+
+$(pileupFile): $(cleanAlignments) $(genomeRef) | $(variantDir)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools merge -o - $(cleanAlignments) | conda run --no-capture-output -n rssw-minimap2-samtools samtools mpileup -f $(genomeRef) - | gzip -c > $(pileupFile)
+
+.PHONY: pileup
+
+pileup: $(pileupFile)
+
+
+## No conda or other easy installation options for SNAPE, have to build from source (needs OCAML compiler)
+
+SNAPEBin=snape-pooled/snape-pooled
+
+SNAPEDir=$(variantDir)/SNAPE
+
+$(SNAPEDir):
+	if [ ! -d $(SNAPEDir) ]; then mkdir $(SNAPEDir); fi
+
+
+## Snape is extremely slow, at least for our data. My estimate is that it will need several weeks of wall time to run single-threaded
+## So we need to split the work up. As far as I can tell, snape does not have built in multithreading, but we can split the work up
+## By splitting the input 
+##
+## Splitting up into 56 input files, so we can max out the number of threads on our machine
+
+## Default suffixes for split, when outputting 56 files
+
+##aa ab ac ad ae af ag ah ai aj ak al am an ao ap aq ar as at au av aw ax ay az ba bb bc bd be bf bg bh bi bj bk bl bm bn bo bp bq br bs bt bu bv bw bx by bz ca cb cc cd
+
+pileupLineCount = $(shell zcat $(pileupFile) | wc -l)
+
+snapeTmpInLines = $(shell echo "$(pileupLineCount) / 55" | bc)
+
+snapeTmpInFiles=$(addprefix $(SNAPEDir)/snape.in.,aa ab ac ad ae af ag ah ai aj ak al am an ao ap aq ar as at au av aw ax ay az ba bb bc bd be bf bg bh bi bj bk bl bm bn bo bp bq br bs bt bu bv bw bx by bz ca cb cc cd)
+
+## Use the first tmp file as a "trigger", otherwise we run split 56 times!
+
+snapeInFileTrigger=$(SNAPEDir)/snape.in.aa
+
+$(snapeInFileTrigger): $(pileupFile)
+	zcat $(pileupFile) | split -l $(snapeTmpInLines) -  $(SNAPEDir)/snape.in.
+
+
+snapeTmpOutfiles=$(subst .in.,.out.,$(snapeTmpInFiles))
+
+$(snapeTmpOutfiles): $(snapeInFileTrigger)
+	cat $(subst .out.,.in.,$@) | $(SNAPEBin) -nchr 480 -fold folded -priortype flat -noextremes > $@
+
+
+## Combine the output into a single file and gzip to conserve space
+
+
+SNAPEOutFile=$(SNAPEDir)/snape.out.gz
+
+$(SNAPEOutFile): $(snapeTmpOutfiles) | $(SNAPEDir)
+	cat $(snapeTmpOutfiles) | gzip -c > $(SNAPEOutFile)
+
+.PHONY: snape
+
+snape: $(SNAPEOutFile)
+
+## Filter for only polymorphic sites. SNAPE output gives the posterior probability for 1 - p0 in column 9, where p0 is a minor allele frequency of 0. That means 1 - p0 is the posterior probability that the sample is not fixed for the major allele. Column 10 gibes the posterior prob for p1, that the site is fixed for the minor allele. Thus, (1 - p0) - p1 gives us the posterior probability that the site is polymorphic. Take a posterior prob of polymorphic >= 0.9 as evidence of polymorphism.
+
+FilteredSNAPEOutFile=$(SNAPEDir)/snape.polymorphic.out.gz
+
+$(FilteredSNAPEOutFile): $(SNAPEOutFile)
+	zcat $(SNAPEOutFile) | awk '{if ( 1 - ( (1 - $$9) + $$10 ) >= 0.99) {print $$0}}' | gzip -c > $(FilteredSNAPEOutFile)
+
+.PHONY: snape-filter
+
+snape-filter: $(FilteredSNAPEOutFile)
+
+## Clean up intermediate files from SNAPE.
+## Use with caution
+.PHONY: snape-clean
+
+snape-clean:
+	rm $(snapeTmpInFiles) $(snapeTmpOutfiles)

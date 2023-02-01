@@ -1,0 +1,59 @@
+---
+title: "SNAP-pooled site frequency spectrum"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Introduction
+
+We used `snape-pooled` to identify polymorphic sites and estimate the frequency of the non-reference allele. SNAPE only works with a single pooled DNA sample, so we combined the data from all 8 locations into a single pileup file.
+
+SNPs were retained if the posterior probability of a site being polymorphic was >= 0.99.
+
+# Read in data
+
+Snape outputs results as a simple tab delineated table, which I compressed to save space.
+
+```{r}
+dat <- read.table(gzfile("snape.polymorphic.out.gz"),
+                         header = FALSE,
+                         col.names = c("contig",
+                                       "position",
+                                       "ref",
+                                       "ref.count",
+                                       "alt.count",
+                                       "ref.qual",
+                                       "alt.qual",
+                                       "common.nucleotides",
+                                       "prob.ref.not.fixed",
+                                       "prob.alt.fixed",
+                                       "p"))
+```
+
+# Folded SFS
+
+Since we don't know if the reference or alt allele is the ancestral one, produce a folded SFS of the minor allele frequencies. Use the `purrr::map2` function for this.
+
+```{r}
+library(purrr)
+```
+
+```{r}
+maf <- unlist(map2(dat$p, 1 - dat$p, min))
+```
+
+```{r}
+hist(maf, 
+     breaks = 100,
+     main = "Folded site frequency spectrum",
+     xlab = "minor allele frequency",
+     col = "firebrick2")
+
+```
+
+
+This does not look terrible. Probably not exactly the neutral expectation (note how very rare alleles are under-represented). However the bias toward detection of high-heterozygosity sites is much less pronounced than we saw with `mapgd`.
+
+
+
