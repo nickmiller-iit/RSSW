@@ -367,3 +367,36 @@ snape-filter: $(FilteredSNAPEOutFile)
 
 snape-clean:
 	rm $(snapeTmpInFiles) $(snapeTmpOutfiles)
+
+
+## Prep files for poolfstat
+
+## Pool fstat accepts a VCF file with AD fields to provide read counts.
+## BCFtools mpileup can produce the needed VCF, and we can give it a list of sites to include
+## Here, produce a VCF from the polymorphic sites identified by SNAPE
+
+
+
+fstatDir=poolFstat
+
+
+$(fstatDir):
+	if [ ! -d $(fstatDir) ]; then mkdir $(fstatDir); fi
+
+
+includedSitesList=$(fstatDir)/includedSites
+
+$(includedSitesList): $(FilteredSNAPEOutFile) | $(fstatDir)
+	zcat $(FilteredSNAPEOutFile) | cut -f 1,2 > $(includedSitesList)
+
+
+
+includedSitesVCF=$(fstatDir)/includedSites.vcf
+
+$(includedSitesVCF): $(includedSitesList) $(cleanAlignments) $(genomeRef)
+	conda run --no-capture-output -n rssw-bcftools bcftools mpileup -R $(includedSitesList) --skip-indels  --fasta-ref $(genomeRef) -a FORMAT/AD,INFO/AD $(cleanAlignments)  > $(includedSitesVCF)
+
+.PHONY: vcf
+
+vcf: $(includedSitesVCF)
+
