@@ -54,3 +54,14 @@ Looking at the site frequency spectrum, SNAPE appears to be much less biased tow
 
 
 Based on what we have seen here, decided to use the SNAPE-detected SNPs for further analysis.
+
+## Fstats
+
+The R package `poolfstat` can compute FST and friends from pool-seq data. It takes a VCF with allele depth information as input. Initially made a VCF from the polymorphisms identified by SNAPE. Before analysis, did some further filtering of the data in R:
+
+ 1. Only imported those sites for which coverage was >= 10 reads in each pool.
+ 2. "Thinned" the data so that SNPs were at least 1kb apart. This was done to avoid issues with LD between closely linked sites.
+ 
+These 2 operations take a while (roughly a day), so set up a script to run thatm and save the resulting `poolfstat::pooldata` object as a binary file in R's RDS format.
+
+Resulting data set contained 702,906 SNPs, which should be plenty! 
