@@ -1,0 +1,153 @@
+---
+title: "F-Statistics on Pool-Seq data"
+output:
+  html_document:
+    df_print: paged
+---
+
+Previously, and documented elsewhere, we sequenced pools of 30 individuals from 8 locations. Pool-seq data from each location was aligned to our genome assembly and used to call SNPs. I then "thinned" the SNPs so that SNPs were at least 1kb apart. This is to avoid issues of linkage disequilibrium between SNPs that are extremely close together. The retained SNPs were saved to to a `poolfstat::pooldata` object on disk
+
+# Libraries
+
+```{r}
+library(poolfstat)
+library(sf)
+library(vegan)
+```
+
+# Read the data
+
+```{r}
+poolseq.dat <- readRDS("pooldata.dat")
+
+poolseq.dat
+```
+
+We have a total of 702,906 SNPs
+
+# Global F~ST~
+
+First thing to look at, is there much global genetic differentiation. Do this with function from the `poolfstat` package. The computeFST function will also perform a "block-jacknife" and estimate the jacknife mean and standard error. The block jacknife is the same as the regular jacknife (recompute leaving out 1 sample each time), but more than one observation is omitted each time. For this implemenatation the block consists of the specified number of adjacent SNPs. Since we already thinned the SNPs, set the block size to 1, giving a regular jacknife.
+
+```{r}
+global.fst <- computeFST(poolseq.dat,
+                         nsnp.per.bjack.block = 1)
+```
+
+The point estimate for F~ST~
+
+```{r}
+global.fst$FST
+```
+
+And the jacknife mean and se
+
+```{r}
+global.fst$mean.fst
+
+global.fst$se.fst
+```
+
+So the overall F~ST~ is significantly greater than zero (the jacknife mean is > 2 * jacknife se away from zero), but the absolute value is extremely small.
+
+This makes sense because with \> 700,000 SNPs we whould have the power to detect even very small F~ST~ that is greater than zero.
+
+# Paiwise F~ST~
+
+
+Don't expect to see anything much, given the global value of F~ST~ is so small, but let's take a look, especially for isolation by distance. Increased the number of SNPs per block because regular jacknife was way too slow.
+
+```{r}
+pairwise.fst <- compute.pairwiseFST(poolseq.dat,
+                                    nsnp.per.bjack.block = 5)
+```
+
+The `poolfstat` package provides a function to plot the 95% confidence intervals of pairwise F~ST~s
+
+```{r}
+plot_fstats(pairwise.fst)
+dev.copy2eps(file = "pairwiseFST.eps")
+```
+So, as with the global F~ST~, pairwise F~ST~s are generally greater than zero, but still quite small in magnitude. Interestingly, site T, which is a considerable distance from the other sites (in Colorado) does not appear to be drastically more differentiated from other sites than anything else.
+
+## Isolation by distance
+
+Pretty sure we are not going to see anything here, but we may as well check for isolation by distance.
+
+Load in coordinates from each site
+
+```{r}
+site.info <- read.table("siteLocations.txt", 
+                          header = TRUE)
+site.info
+```
+Make an `sf` object of the sites.
+
+```{r}
+site.coords <- st_as_sf(site.info, 
+                        coords = c(4,3),
+                        crs = "WGS84")
+
+site.coords
+```
+
+Get the distance matrix (in metres)
+
+```{r}
+geog.dists <- st_distance(site.coords)
+rownames(geog.dists) <- c("B", "D", "H", "K", "L", "O", "S", "T")
+colnames(geog.dists) <- c("B", "D", "H", "K", "L", "O", "S", "T")
+geog.dists
+```
+
+
+The classic analysis of 2D stepping stone models predicts a linear relationship between "linearized" F~ST~  $\frac{F_{ST}}{1 - F_{ST}}$ and log distance.
+
+Get linearized F~ST~ and log distance as distance objects.
+
+```{r}
+lin.fst <- as.dist(pairwise.fst@PairwiseFSTmatrix/(1-(pairwise.fst@PairwiseFSTmatrix)))
+
+lin.fst
+```
+```{r}
+log.dist <- as.dist(log(geog.dists))
+
+log.dist
+```
+
+Can we see an obvious trend?
+
+```{r}
+plot(log.dist, 
+     lin.fst,
+     xlab = "ln(distance)",
+     ylab = "FST / (1-FST)",
+     pch = 21,
+     bg = "firebrick2"
+     )
+
+dev.copy2eps(file = "isolationByDist.eps")
+```
+
+Nope, Nothing obvious.
+
+Try a Mantel test, just to be sure.
+
+```{r}
+mantel(log.dist, 
+       lin.fst)
+
+```
+
+Again, no.
+
+# Conclusion
+
+There is essentially no population genetic structure over the study area. Although we can detect significant differentiation between sites, the magnitude is extremely small, and only detectable as significant because we have a lot of power with > 700,000 loci.
+
+
+
+
+
+
