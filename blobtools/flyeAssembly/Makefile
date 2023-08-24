@@ -91,9 +91,15 @@ $(superkingdomBlobPlot): $(blobDBFile)
 	conda run --no-capture-output -n rssw-blobtools blobtools plot  -i $(blobDBFile) --rank superkingdom
 	mv $(blobDBFile).bestsum.superkingdom.p8.span.100.blobplot.bam0.png $(superkingdomBlobPlot)
 
+orderBlobPlot=$(notdir $(targetAssembly)).order.png
+
+$(orderBlobPlot):  $(blobDBFile)
+	conda run --no-capture-output -n rssw-blobtools blobtools plot  -i $(blobDBFile) --rank order
+	mv $(blobDBFile).bestsum.order.p8.span.100.blobplot.bam0.png $(orderBlobPlot)
+
 .PHONY: blobplots
 
-blobplots: $(phylumBlobPlot) $(superkingdomBlobPlot)
+blobplots: $(phylumBlobPlot) $(superkingdomBlobPlot) $(orderBlobPlot)
 
 #tabulated results by contig
 
@@ -107,6 +113,11 @@ superkingdomBlobTable=superkingdom.$(notdir $(targetAssembly)).blobDB.table.txt
 $(superkingdomBlobTable): $(blobDBFile)
 	conda run --no-capture-output -n rssw-blobtools blobtools view -i $(blobDBFile) --rank superkingdom -o superkingdom
 
+orderBlobTable=order.$(notdir $(targetAssembly)).blobDB.table.txt
+
+$(orderBlobTable): $(blobDBFile)
+	conda run --no-capture-output -n rssw-blobtools blobtools view -i $(blobDBFile) --rank order -o order
+
 .PHONY: blobtables
 
-blobtables: $(phylumBlobTable) $(superkingdomBlobTable)
+blobtables: $(phylumBlobTable) $(superkingdomBlobTable) $(orderBlobTable)
