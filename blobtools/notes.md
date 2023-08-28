@@ -45,3 +45,9 @@ Blobplots at the phylum and superkingdom:
 ![superkingdom blobplot](flyeAssembly/assembly.fasta.superkingdom.png)
 
 So we do have some contamination, which is not surprising, mostly from bacteria and "undefined" taxa. There isn't much obvious clustering, except for some bacterial contigs that have slightly lower GC content. We cant really filter out contamiants based on coverage or GC, but we can probably still do it based on taxonomic assignment.
+
+## Checking insect orders
+
+After a conversation about parasitoids, it occured that we should check for substantial contamination by hymenopteran DNA, in case one or more of the larvae we used was parasitized. Runnin a blob plot ot the oder level give most contigs as Colepotera, some contigs are assigned to other arthropod orders, by Hymenoptera is faily well down the list, so I don't thing parasitism is a concernt.
+
+![order blobplot](flyeAssembly/assembly.fasta.order.png)

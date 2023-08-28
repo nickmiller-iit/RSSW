@@ -4,7 +4,7 @@ targetAssembly=../../assembly/flyeAssembly/assembly.fasta
 
 # Hits file for diamond seach against Uniref90
 
-diamondOpts=--outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore --max-target-seqs 1 --sensitive --threads 28 --evalue 1e-25
+diamondOpts=--outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore --max-target-seqs 10 --sensitive --threads 28 --evalue 1e-25
 
 diamondDb=../diamond_db/uniprot/uniref90.dmnd
 
