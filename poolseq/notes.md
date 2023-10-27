@@ -65,3 +65,13 @@ The R package `poolfstat` can compute FST and friends from pool-seq data. It tak
 These 2 operations take a while (roughly a day), so set up a script to run thatm and save the resulting `poolfstat::pooldata` object as a binary file in R's RDS format.
 
 Resulting data set contained 702,906 SNPs, which should be plenty! 
+
+## PCA
+
+As another approach to looking at population structure, try a PCA and see if samples cluster by geographical distance. Variables here will be the estimated allele frequencies for each pool at each locus.
+
+### Calling frequencies
+
+Our initial run with `SNAPE-pooled` combined all samples together. Now we will need to run it on each sample separately. To avoid a lot of unecessary work, we can look at only the sites that were previously called as polymorphic.
+
+

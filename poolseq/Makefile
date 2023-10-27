@@ -400,3 +400,29 @@ $(includedSitesVCF): $(includedSitesList) $(cleanAlignments) $(genomeRef)
 
 vcf: $(includedSitesVCF)
 
+#
+# Allele frequencies for PCA
+#
+# We will want the allele frequencies for each sample separately. We can do this by re-running snape-pooled on
+# pileups for each individual sample. Since snape-pooled is quite slow, we will only run it on the sites that were previously
+# identified as polymorphic. We already have this list for the fstat includedSitesFile
+
+samplesSNAPEDir=$(SNAPEDir)/samples
+
+$(samplesSNAPEDir):
+	if [ ! -d $(samplesSNAPEDir) ]; then mkdir $(samplesSNAPEDir); fi
+
+samplesSNAPEInFiles=$(addsuffix .pileup,$(subst $(alignDir),$(samplesSNAPEDir),$(cleanAlignments)))
+
+$(samplesSNAPEInFiles): $(cleanAlignments) $(includedSitesList) $(genomeRef) | $(samplesSNAPEDir)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools mpileup -f $(genomeRef) --positions $(includedSitesList) $(subst $(samplesSNAPEDir),$(alignDir),$(basename $@)) > $@
+
+
+samplesSNAPEOutFiles=$(subst .pileup,.out,$(samplesSNAPEInFiles))
+
+$(samplesSNAPEOutFiles): $(samplesSNAPEInFiles)
+	cat $(subst .out,.pileup,$@) | $(SNAPEBin) -nchr 60 -fold folded -priortype flat -noextremes > $@
+
+.PHONY: snape-samples
+
+snape-samples: $(samplesSNAPEOutFiles)
