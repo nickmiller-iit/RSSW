@@ -414,14 +414,17 @@ $(samplesSNAPEDir):
 
 samplesSNAPEInFiles=$(addsuffix .pileup,$(subst $(alignDir),$(samplesSNAPEDir),$(cleanAlignments)))
 
-$(samplesSNAPEInFiles): $(cleanAlignments) $(includedSitesList) $(genomeRef) | $(samplesSNAPEDir)
-	conda run --no-capture-output -n rssw-minimap2-samtools samtools mpileup -f $(genomeRef) --positions $(includedSitesList) $(subst $(samplesSNAPEDir),$(alignDir),$(basename $@)) > $@
+samplesSNAPETargetSNPs=$(samplesSNAPEDir)/thinned.sites
+
+$(samplesSNAPEInFiles): $(cleanAlignments) $(samplesSNAPETargetSNPs) $(genomeRef) | $(samplesSNAPEDir)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools mpileup -f $(genomeRef) --positions $(samplesSNAPETargetSNPs) $(subst $(samplesSNAPEDir),$(alignDir),$(basename $@)) > $@
 
 
 samplesSNAPEOutFiles=$(subst .pileup,.out,$(samplesSNAPEInFiles))
 
 $(samplesSNAPEOutFiles): $(samplesSNAPEInFiles)
-	cat $(subst .out,.pileup,$@) | $(SNAPEBin) -nchr 60 -fold folded -priortype flat -noextremes > $@
+	cat $(subst .out,.pileup,$@) | $(SNAPEBin) -nchr 60 -fold folded -priortype flat -trust 1 > $@
+#	cat $(subst .out,.pileup,$@) | $(SNAPEBin) -nchr 60 -fold folded -priortype flat -noextremes > $@
 
 .PHONY: snape-samples
 

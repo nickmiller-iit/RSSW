@@ -72,6 +72,6 @@ As another approach to looking at population structure, try a PCA and see if sam
 
 ### Calling frequencies
 
-Our initial run with `SNAPE-pooled` combined all samples together. Now we will need to run it on each sample separately. To avoid a lot of unecessary work, we can look at only the sites that were previously called as polymorphic.
+Our initial run with `SNAPE-pooled` combined all samples together. Now we will need to run it on each sample separately. To avoid a lot of unecessary work, we can look at only the sites that were previously called as polymorphic. An initial run on all previously called polymorphic sites threw up some oddities, so tried limiting to just the 702,906 thinned SNPs used for FST analysis.
 
 
