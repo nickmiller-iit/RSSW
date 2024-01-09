@@ -1,0 +1,110 @@
+---
+title: "PCA analysis of ppol-seq allele frequencies"
+output: html_notebook
+---
+
+# Introduction
+
+F-stats analysis does not show any sign of population structure or isolation by ditance. Another way to look at this is to do a PCA of allele frequencies and see if there is any sign of samples clustering by gorgraphical distance.
+
+To estimate allele frequencies, `snape-pooled` was run on each sample individually. To start out, this was restricted to the 702,906 "thinned" SNPs used for FStats.
+
+# Required Libraries
+
+```{r}
+library(dplyr)
+library(stringr)
+library(PCAtools)
+```
+
+
+# Read in data
+
+The output of `snape-pooled` is a little funky. It will skip a few SNPs, I am guessing this is where there are no data in the pilup. It will also produce a few truncated lines with an asterisk in the "number of reference nucleotides" column, and nothing else.
+
+To work around these behaviours, we need to get the complete list of possible sites, independent of the sites presented in each `snape-pooled` output file. Then each `snape-pooled` input file, left join to the data to add the allele frequencies, allowing for some NAs to enter the read data.
+
+Files and directories
+
+```{r}
+data.dir <-"../variantCalling/SNAPE/samples/"
+sites.file <- "../variantCalling/SNAPE/samples/thinned.sites"
+snape.files <- paste(data.dir, list.files(path = data.dir, pattern = "*.out"), sep = "")
+
+```
+
+
+Get all the sites
+```{r}
+sites <- read.table(sites.file, 
+                    col.names = c("contig",
+                                 "site"))
+sites$key <- paste(sites$contig, 
+                   sites$site, 
+                   sep = "_")
+
+```
+
+A `data.frame` for the frequencies
+
+```{r}
+freqs <- sites
+```
+
+
+Loop through each `snape-pooled` file. Make the key, rename col 11 (the allele frequency) to the sample name and left join to the frequencies table.
+
+```{r}
+for(idx in 1:length(snape.files)){
+  tmp <- read.table(snape.files[idx], fill = T)
+  names(tmp)[11] <- str_split(str_extract(snape.files[idx], 
+                                          "[A-Z].bam.out"), 
+                              "\\.", 
+                              simplify = T)[,1]
+  tmp$key <- paste(tmp[,1], tmp[,2], sep = "_")
+  freqs <- left_join(freqs, tmp[,c(12, 11)], by = "key")
+}
+```
+
+# PCA
+
+Run a basic PCA on the frequencies. Not that `prcomp` will not accepts missing values. We can catch these by applying `sum` to get rows that contain 1 or more NAs.
+
+
+
+```{r}
+# How many rows contain at leas 1 NA
+sum(is.na(apply(freqs[,4:11], 1, sum)))
+
+```
+```{r}
+freqs.clean <- as.matrix(freqs[which(!(is.na(apply(freqs[,4:11], 1, sum)))), 4:11])
+row.names(freqs.clean) <- freqs[which(!(is.na(apply(freqs[,4:11], 1, sum)))), 3]
+
+```
+
+```{r}
+p <- pca(freqs.clean, scale = T, center = T)
+p
+```
+
+A "biplot" of the samples on PCs 1 and 2
+
+```{r}
+biplot(p, lab = p$yvars)
+
+```
+
+Superficially, it looks like this might reflect the north - south transect, but the samples are not in the right order.
+
+We can see this if we plot PC1 versus latitude.
+
+```{r}
+site.info <- read.table("../poolFstat/siteLocations.txt", header = T)
+plot(p$rotated$PC1, site.info$Lat, xlab = "PC1", ylab = "Latitude")
+
+```
+
+# Conclusion
+
+PCA does not reveal any weak isolation by distance that is not picked up by the fstats analysis.
