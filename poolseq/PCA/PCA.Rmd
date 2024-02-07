@@ -1,6 +1,8 @@
 ---
 title: "PCA analysis of ppol-seq allele frequencies"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Introduction
