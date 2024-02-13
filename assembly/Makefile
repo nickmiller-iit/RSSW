@@ -138,11 +138,13 @@ busco-analysis-flyedecon: $(BUSCOFlyeDeconOutFile)
 
 # Use redundans to remove redundant contigs from decontamiated flye assembly due to pooled input DNA
 
-redundansOutDir=flyeRedundans
+redundansOutDir=flyeRedundansNoReads
 
 redundansOutput=$(redundansOutDir)/scaffolds.reduced.fa
 
-redundansOpts=--threads 54 --mem 128 --longreads $(assemblyHifiReads) --outdir $(redundansOutDir)
+#redundansOpts=--threads 54 --mem 128 --longreads $(assemblyHifiReads) --outdir $(redundansOutDir)
+redundansOpts=--threads 54 --mem 128  --outdir $(redundansOutDir)
+
 
 $(redundansOutput): $(deconOut)
 	conda run --no-capture-output -n rssw-redundans redundans.py $(redundansOpts) -f $(deconOut)
@@ -165,7 +167,7 @@ flyeRedundansAsm-stats: $(flyeRedundansAsmStatsFile)
 
 # BUSCO analysis of the flye assembly deduplicated with redundans
 
-BUSCOFlyeRedundansOutDir=busco_flyeRedundans
+BUSCOFlyeRedundansOutDir=busco_flyeRedundansNoReads
 
 BUSCOFlyeRedundansOutFile=$(BUSCOFlyeRedundansOutDir)/run_$(BUSCOLineage)/full_table.tsv
 
@@ -177,3 +179,105 @@ $(BUSCOFlyeRedundansOutFile): $(redundansOutput)
 .PHONY: busco-analysis-flyeRedundans
 
 busco-analysis-flyeRedundans: $(BUSCOFlyeRedundansOutFile) 
+
+# Polishing the assembly with short reads
+
+
+## Polishing with pilon.
+
+
+
+polishDir=polish
+
+$(polishDir):
+	if [ ! -d $(polishDir) ]; then mkdir $(polishDir); fi
+
+
+polishInputGenome=$(redundansOutput)
+
+polishMappedReads=$(polishDir)/reads.bam
+
+polishLeftReads=../poolseq/data/trimmed/B_CKDN220061309-1A_HMN35DSX5_L4_1.fq.gz
+polishRightReads=../poolseq/data/trimmed/B_CKDN220061309-1A_HMN35DSX5_L4_2.fq.gz
+
+$(polishMappedReads): $(polishLeftReads) $(polishRightReads) $(polishInputGenome) | $(polishDir)
+	conda run --no-capture-output -n rssw-minimap2-samtools minimap2 -t 16 -ax sr $(polishInputGenome) $(polishLeftReads) $(polishRightReads) | conda run --no-capture-output -n rssw-minimap2-samtools samtools view -b > $(polishDir)/tmp.bam
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools sort -@ 16 $(polishDir)/tmp.bam > $(polishMappedReads)
+	rm $(polishDir)/tmp.bam
+
+polishMappedReadsIDX=$(polishMappedReads).bai
+
+$(polishMappedReadsIDX): $(polishMappedReads)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools index $(polishMappedReads)
+
+
+### Pilon is a java program and a bit of a memory hog. If it runs out of memory because there are too many contigs it
+### fails
+### As a workaround, increase the memory for the java VM to 200 GB and split the polishing into batches of 500 contigs
+
+polishContigIDs=$(polishDir)/contigIDs
+
+$(polishContigIDs): $(polishInputGenome) | $(polishDir)
+	grep ">" $(polishInputGenome) | tr -d ">" > $(polishContigIDs)
+
+### Use the first file in the split as the the target
+
+polishBatch0=$(polishDir)/batch_000
+
+$(polishBatch0): $(polishContigIDs)
+	split -a 3 -d -l 500 $(polishContigIDs) $(polishDir)/batch_
+
+### Get the full set of batches to work through
+
+polishBatches=$(shell ls $(polishDir)/batch_*)
+#polishBatches=$(polishDir)/batch_000 $(polishDir)/batch_001
+
+polishedContigs=$(addsuffix .fasta,$(polishBatches))
+
+
+### Polishing each batch
+### 1. Extract the contigs in the batch to a temporary file
+### 2. Extract the reads aligned to the contigs in the batch to a temporary BAM file - NB we are already sorted
+### 3  Index the temp BAM file
+### 4. Use pilon to polish the contigs and output
+### 5. Clean up tmp files
+
+### Side note pilon has the annoying behaviour the --output specifys a "prefix" for the output files and appends .fasta
+
+
+$(polishedContigs): $(polishBatch0)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools faidx -r $(basename $@) $(polishInputGenome) > $(subst .fasta,.tmp.fasta,$@)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools faidx $(subst .fasta,.tmp.fasta,$@)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools view -b $(polishMappedReads) $(shell cat $(basename $@) | tr "\n" " ") > $(subst .fasta,.tmp.bam,$@)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools index $(subst .fasta,.tmp.bam,$@)
+	conda run --no-capture-output -n rssw-pilon pilon -Xmx200G --genome $(subst .fasta,.tmp.fasta,$@)  --frags $(subst .fasta,.tmp.bam,$@)  --fix indels,snps --output $(basename $@)
+	rm $(subst .fasta,.tmp.fasta,$@) $(addsuffix .fai,$(subst .fasta,.tmp.fasta,$@)) $(subst .fasta,.tmp.bam,$@) $(addsuffix .bai,$(subst .fasta,.tmp.bam,$@))
+
+polishedAssembly=$(polishDir)/polishedGenome.fasta
+
+.PHONY: polish-genome
+
+polish-genome:
+	cat $(shell ls $(polishDir)/batch_*.fasta) > $(polishedAssembly)
+
+
+
+
+
+
+
+# BUSCO analysis of the polished assembly 
+
+BUSCOPolishedOutDir=busco_polished
+
+BUSCOPolishedOutFile=$(BUSCOPolishedOutDir)/run_$(BUSCOLineage)/full_table.tsv
+
+#BUSCOOpts= --mode genome --augustus --long --lineage $(BUSCOLineage) --cpu 56
+
+$(BUSCOPolishedOutFile): $(redundansOutput)
+	conda run --no-capture-output -n rssw-busco busco -i $(polishedAssembly) $(BUSCOOpts) --out $(BUSCOPolishedOutDir)
+
+
+.PHONY: busco-analysis-polished
+
+busco-analysis-polished: $(BUSCOPolishedOutFile)

@@ -214,9 +214,22 @@ However, it does appear to have had a substantial impact on the assembly
 
 Total assembly is reduced to 1.58 Gb, this si smaller than the genome size, but could be due to collapsing some repeats. Total number of contigs with read scaffolding is less than half the number without it, and N50 is almost quadrupled.
 
-## BUSCO analysis of deduplicated, decontaminated assembly
+## BUSCO analysis of deduplicated  decontaminated assemblies
 
-Given the substantial impact on assembly stats of including the long reads for scaffolding, it would be worthwhile seeing if there is an impact on BUSCO results, especially with repsect to duplicated BUSCOs.
+Given the substantial impact on assembly stats of including the long reads for scaffolding, it would be worthwhile seeing if there is an impact on BUSCO results, especially with repsect to duplicated BUSCOs. Ran BUSCO analyses of the decontaminate, deduplicated assemblies with and without the use of long read scffolding.
+
+### Without long read scaffolding
+
+	C:62.9%[S:54.4%,D:8.5%],F:6.3%,M:30.8%,n:2124
+	1337	Complete BUSCOs (C)
+	1156	Complete and single-copy BUSCOs (S)
+	181	Complete and duplicated BUSCOs (D)
+	134	Fragmented BUSCOs (F)
+	653	Missing BUSCOs (M)
+	2124	Total BUSCO groups searched
+
+
+### With long read scaffolding
 
 	C:58.5%[S:52.5%,D:6.0%],F:5.9%,M:35.6%,n:2124
 	1243	Complete BUSCOs (C)
@@ -226,6 +239,48 @@ Given the substantial impact on assembly stats of including the long reads for s
 	756	Missing BUSCOs (M)
 	2124	Total BUSCO groups searched
 
-This has made some difference compared to the decontaminated primary assembly. We have got rid of 83 duplicated BUSCOs, bring the percent duplicated down to 6%, which is more acceptable. On the other hand, we have added 115 missing BUSCOs. It looks like the removed duplicated BUSCOs have been lost from the assembly (along with some somplete single copy BUSCOs), rather than being converted to single copy.
+This has made some difference compared to the decontaminated assembly deduplicated without long read scaffolding. We have 54 fewer duplicated BUSCOs, bring the percent duplicated down to 6%. On the other hand, we have 103 more missing BUSCOs and 94 fewer complete BUSCOS. It looks like the removed duplicated BUSCOs have been lost from the assembly (along with some complete single copy BUSCOs), rather than being converted to single copy.
 
-So now we need to think about whether we prefer assembly with more complete BUSCOs, but higher duplication, or the one with fewer complete BUSCOs, but less duplication. 
+So now we need to think about whether we prefer assembly with more complete BUSCOs, but slightly higher duplication, or the one with fewer complete BUSCOs, but less duplication. On balance, I think the assembly **without** long read scaffolding is preferable.
+
+
+# Polishing with sort reads
+
+** NOTE 2024-02-07 **
+
+For downstream analysis purposes we have been using the decontaminated assembly that was deduplicated using redundans *without* using the read data. We will stick with that.
+
+Paulina did a structural annotation using BRAKER2 and fished out part of the voltage-gated sodium channel. She did rcover some, but there appear to be abunch of internal chunks of the gene missing. I've been trying to align the parts she obtained to other voltage gated sodium channels and noticed that even in the parts that do align, there are a remarkably high number of susbtitutions compared to toher insects (including weeveils). This leads me to wonder if we might have a lot of frameshift errors in our assembly. This might also explain the high count of missing BUSCOs.
+
+One way we might be able to fix this is by polishing the assembly with short read data. We do have plenty of that, although it comes from pools of individuals, so it is not ideal. It might be OK for fixing indels though.
+
+## Polishing with pilon
+
+Pilon is a pretty widely used polishing tool. Had to do some tricks to get around memory limitations. Used the pool-seq data from location B as short read data for poishing.
+
+After 1 round of polishing, assembly stats were
+
+	stats for polishedGenome.fasta
+	sum = 1824087324, n = 28643, ave = 63683.53, largest = 1739682
+	N50 = 115286, n = 3979
+	N60 = 86019, n = 5821
+	N70 = 63294, n = 8288
+	N80 = 43899, n = 11754
+	N90 = 28205, n = 16924
+	N100 = 473, n = 28643
+	N_count = 7600
+	Gaps = 76
+
+So, total length of assembly has decreased slightly, but bumber of contigs and number of gaps remain unchanged.
+
+After one round of polishing, ran a BUSCO analysis to see if things have changed much.
+
+	C:63.0%[S:54.4%,D:8.6%],F:6.1%,M:30.9%,n:2124
+	1338	Complete BUSCOs (C)
+	1156	Complete and single-copy BUSCOs (S)
+	182	Complete and duplicated BUSCOs (D)
+	130	Fragmented BUSCOs (F)
+	656	Missing BUSCOs (M)
+	2124	Total BUSCO groups searched
+
+Apparently not, the numbers are almost identical to pre-polishing (decontaminated, deduplicated without the use of the long reads). it looks like we have  lost four fragmented BUSCOs and one of which has been converted to a complete BUSCO and three of which have been lost altogether.
