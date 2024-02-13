@@ -1,0 +1,5 @@
+name: rssw-pilon
+channels:
+ - bioconda
+dependencies:
+ - pilon=1.24 
