@@ -1,0 +1,6 @@
+name: rssw-hisat2
+channels:
+ - bioconda
+dependencies:
+ - samtools=1.13
+ - hisat2=2.2.1

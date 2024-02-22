@@ -1,0 +1,5 @@
+name: rssw-rascaf
+channels:
+ - bioconda
+dependencies:
+ - rascaf

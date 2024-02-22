@@ -272,7 +272,6 @@ BUSCOPolishedOutDir=busco_polished
 
 BUSCOPolishedOutFile=$(BUSCOPolishedOutDir)/run_$(BUSCOLineage)/full_table.tsv
 
-#BUSCOOpts= --mode genome --augustus --long --lineage $(BUSCOLineage) --cpu 56
 
 $(BUSCOPolishedOutFile): $(redundansOutput)
 	conda run --no-capture-output -n rssw-busco busco -i $(polishedAssembly) $(BUSCOOpts) --out $(BUSCOPolishedOutDir)
@@ -281,3 +280,94 @@ $(BUSCOPolishedOutFile): $(redundansOutput)
 .PHONY: busco-analysis-polished
 
 busco-analysis-polished: $(BUSCOPolishedOutFile)
+
+
+# Attempting to scaffold using RNA-Seq data and rascaf
+#
+# Although pilon polishing did not have a major impact, it didn't seem to do any harm, so will start from there
+
+rascafDir=rascaf_scaffolding
+
+rascafInputGenome=$(polishedAssembly)
+
+$(rascafDir):
+	if [ ! -d $(rascafDir) ]; then mkdir $(rascafDir); fi
+
+rnaSeqLeft=../RNASeq/01.RawData/S2/S2_1.fq.gz
+
+rnaSeqRight=../RNASeq/01.RawData/S2/S2_2.fq.gz
+
+### Map RNA-Seq data with Hisat 2
+### Note that Hisat2 creates multiple index files named *.n.ht2, where n is a digit
+### use the first file as a trigger for make
+
+hisatPrefix=$(rascafDir)/preScaffolding
+
+hisatIndex=$(hisatPrefix).1.ht2
+
+$(hisatIndex): $(rascafInputGenome) | $(rascafDir)
+	conda run --no-capture-output -n rssw-hisat2 hisat2-build $(rascafInputGenome) $(hisatPrefix)
+
+
+rnaSeqAlignments=$(rascafDir)/alignedRNA.bam
+
+$(rnaSeqAlignments): $(hisatIndex) $(rascafInputGenome)
+	conda run --no-capture-output -n rssw-hisat2 hisat2 -p 28 -x $(hisatPrefix) -1 $(rnaSeqLeft) -2 $(rnaSeqRight) | conda run --no-capture-output -n rssw-hisat2 samtools view -b > $(rascafDir)/tmp.bam
+	conda run --no-capture-output -n rssw-hisat2 samtools sort $(rascafDir)/tmp.bam > $(rnaSeqAlignments)
+	rm $(rascafDir)/tmp.bam
+
+rnaSeqAlignmentsIDX=$(rnaSeqAlignments).bai
+
+$(rnaSeqAlignmentsIDX): $(rnaSeqAlignments)
+	conda run --no-capture-output -n rssw-hisat2 samtools index $(rnaSeqAlignments)
+
+rascafPrefix=$(rascafDir)/rascaf
+
+rascafConnections=$(rascafPrefix).out
+
+$(rascafConnections): $(rnaSeqAlignmentsIDX)
+	conda run --no-capture-output -n rssw-rascaf rascaf -b $(rnaSeqAlignments) -f $(rascafInputGenome) -o $(rascafPrefix)
+
+rascafScaffoldPrefix=$(rascafDir)/rascaf_scaffold
+
+
+rascafScaffold=$(rascafScaffoldPrefix).fa
+
+$(rascafScaffold): $(rascafConnections)
+	conda run --no-capture-output -n rssw-rascaf rascaf-join -r $(rascafConnections) -o $(rascafScaffoldPrefix)
+
+
+.PHONY scaffold:
+
+scaffold: $(rascafScaffold)
+
+### Run BUSCO analysis on the scaffolded assembly
+
+BUSCOScaffoldedOutDir=busco_scaffolded
+
+BUSCOScaffoldedOutFile=$(BUSCOScaffoldedOutDir)/run_$(BUSCOLineage)/full_table.tsv
+
+
+$(BUSCOScaffoldedOutFile): $(rascafScaffold)
+	conda run --no-capture-output -n rssw-busco busco -i $(rascafScaffold) $(BUSCOOpts) --out $(BUSCOScaffoldedOutDir)
+
+
+.PHONY: busco-analysis-scaffolded
+
+busco-analysis-scaffolded: $(BUSCOScaffoldedOutFile)
+
+
+# The final assembly
+
+## Having deduplicated, polished and scaffolded, there is not much more to do. Link the final final asembly to
+## A file in the top level assembly dir so that we can find it easily and unambigously for downstream analysis.
+
+
+finalAssembly=RSSWDraftGenome.fasta
+
+$(finalAssembly): $(rascafScaffold)
+	ln $(rascafScaffold) $(finalAssembly)
+
+.PHONY: final
+
+final: $(finalAssembly)
