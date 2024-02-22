@@ -284,3 +284,34 @@ After one round of polishing, ran a BUSCO analysis to see if things have changed
 	2124	Total BUSCO groups searched
 
 Apparently not, the numbers are almost identical to pre-polishing (decontaminated, deduplicated without the use of the long reads). it looks like we have  lost four fragmented BUSCOs and one of which has been converted to a complete BUSCO and three of which have been lost altogether.
+
+
+# Scaffolding with RNA-Seq data
+
+It might be worth using RNA-Seq reads to scaffold. This might put some previously fragmented genes into the same scafflds, although it will only help with reasonably highly expressed genes that are represented in the RNA-Seq data.
+
+Opted to use rascaf for this. First we align RNA-Seq reads to the genome. Opted to use the genome that was polished with pilon and aligned reads with hisat2. Then used rascaf to scaffold based on RNA-Seq reads. This is pretty speedy. Running assembly stats on the scaffolded assembly:
+
+	sum = 1824088208, n = 28591, ave = 63799.38, largest = 1739682
+	N50 = 115683, n = 3955
+	N60 = 86217, n = 5790
+	N70 = 63448, n = 8252
+	N80 = 43976, n = 11712
+	N90 = 28211, n = 16879
+	N100 = 473, n = 28591
+	N_count = 8484
+	Gaps = 128
+
+Again, this has made a small difference, but nothing that is likely to be a game changer. Nevertheless, we will run a BUSCO analysis to see if there have been any improvements.
+
+	C:63.1%[S:54.6%,D:8.5%],F:6.2%,M:30.7%,n:2124
+	1339	Complete BUSCOs (C)
+	1159	Complete and single-copy BUSCOs (S)
+	180	Complete and duplicated BUSCOs (D)
+	131	Fragmented BUSCOs (F)
+	654	Missing BUSCOs (M)
+	2124	Total BUSCO groups searched
+
+Again, there have been some small changes, but nothing dramatic.
+
+At this point, the deduplicated, polished and scaffolded genome is probably as good as we are going to get. The main shorcoming is the lage number of missing BUSCOs. It is hard to see how further wrangling of the assembly, without the addition of more high quality data, is going to make a substantial difference. We need to work with what we have at this point.
