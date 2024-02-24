@@ -1,75 +1,75 @@
 #
-# Flye assembly. Deduplicated with redundans, but not scaffolded.
+# Flye assembly. Deduplicated with redundans, polished with pilon and scaffolded with rascaff.
 #
 
-assemblyNoScaff=../assembly/flyeRedundansNoReads/scaffolds.reduced.fa
+assembly=../assembly/RSSWDraftGenome.fasta
 
 # Make the blast db
 # Sould just be a regulat blast database
 
-dbNoScaff=noScaffolding
+BLASTdb=RSSW
 
 #blast database header file, to use as the make target
-dbNoScaffHeader=$(dbNoScaff).nhr
+BLASTdbHeader=$(BLASTdb).nhr
 
-$(dbNoScaffHeader): $(assemblyNoScaff)
-	conda run --no-capture-output -n rssw-repeatmodeler BuildDatabase -name $(dbNoScaff) $(assemblyNoScaff)
+$(BLASTdbHeader): $(assembly)
+	conda run --no-capture-output -n rssw-repeatmodeler BuildDatabase -name $(BLASTdb) $(assembly)
 
-.PHONY: buildDBNoScaff
+.PHONY: buildBLASTdb
 
-buildDBNoScaff: $(dbNoScaffHeader)
+buildBLASTdb: $(BLASTdbHeader)
 
 # Run Repeatmodeler on the database
 
 # Repeatmodeler produces several output files, named after the input database.
 # Use the FASTA format output as the target
-repeatModelerNoScaffOutFile=$(dbNoScaff)-families.fa
+repeatModelerOutFile=$(BLASTdb)-families.fa
 
-$(repeatModelerNoScaffOutFile): $(dbNoScaffHeader)
-	conda run --no-capture-output -n rssw-repeatmodeler RepeatModeler -pa 10 -LTRStruct -database $(dbNoScaff)
+$(repeatModelerOutFile): $(BLASTdbHeader)
+	conda run --no-capture-output -n rssw-repeatmodeler RepeatModeler -pa 10 -LTRStruct -database $(BLASTdb)
 
-.PHONY: repeatModelerNoScaff
+.PHONY: repeatModeler
 
-repeatModelerNoScaff: $(repeatModelerNoScaffOutFile)
+repeatModeler: $(repeatModelerOutFile)
 
 # Run repeat masker using the repeats identified by repeatmasker
 
 # Produces various output files, use the .masked file as the target
 
-repeatMaskerNoScaffOutDir=maskedNoScaff
+repeatMaskerOutDir=masked
 
-$(repeatMaskerNoScaffOutDir):
-	if [ ! -d $(repeatMaskerNoScaffOutDir) ]; then mkdir $(repeatMaskerNoScaffOutDir); fi
+$(repeatMaskerOutDir):
+	if [ ! -d $(repeatMaskerOutDir) ]; then mkdir $(repeatMaskerOutDir); fi
 
-repeatMaskerNoScaffOut=$(repeatMaskerNoScaffOutDir)/$(notdir $(assemblyNoScaff)).masked
+repeatMaskerOut=$(repeatMaskerOutDir)/$(notdir $(assembly)).masked
 
-$(repeatMaskerNoScaffOut): $(repeatModelerNoScaffOutFile) | $(repeatMaskerNoScaffOutDir)
-	conda run --no-capture-output -n rssw-repeatmasker RepeatMasker -lib $(repeatModelerNoScaffOutFile) -dir $(repeatMaskerNoScaffOutDir) -par 28 -gff $(assemblyNoScaff)
+$(repeatMaskerOut): $(repeatModelerOutFile) | $(repeatMaskerOutDir)
+	conda run --no-capture-output -n rssw-repeatmasker RepeatMasker -lib $(repeatModelerOutFile) -dir $(repeatMaskerOutDir) -par 28 -gff $(assembly)
 
-.PHONY: maskNoScaff
+.PHONY: mask
 
-maskNoScaff: $(repeatMaskerNoScaffOut)
+mask: $(repeatMaskerOut)
 
-maskedNoScaffStats=$(repeatMaskerNoScaffOutDir)/stats.txt
+maskedStats=$(repeatMaskerOutDir)/stats.txt
 
-$(maskedNoScaffStats): $(repeatMaskerNoScaffOut)
-	conda run -n rssw-assemblyStats assembly-stats $(repeatMaskerNoScaffOut) > $(maskedNoScaffStats)
+$(maskedStats): $(repeatMaskerOut)
+	conda run -n rssw-assemblyStats assembly-stats $(repeatMaskerOut) > $(maskedStats)
 
 .PHONY: stats
 
-stats: $(maskedNoScaffStats)
+stats: $(maskedStats)
 
 BUSCOLineage=endopterygota_odb10
 
-BUSCONoScaffOutDir=busco_NoScaff
+BUSCOOutDir=busco
 
-BUSCONoScaffOutFile=$(BUSCONoScaffOutDir)/run_$(BUSCOLineage)/full_table.tsv
+BUSCOOutFile=$(BUSCOOutDir)/run_$(BUSCOLineage)/full_table.tsv
 
 BUSCOOpts= --mode genome --augustus --long --lineage $(BUSCOLineage) --cpu 56
 
-$(BUSCONoScaffOutFile): $(repeatMaskerNoScaffOut)
-	conda run --no-capture-output -n rssw-busco busco -i $(repeatMaskerNoScaffOut) $(BUSCOOpts) --out $(BUSCONoScaffOutDir)
+$(BUSCOOutFile): $(repeatMaskerOut)
+	conda run --no-capture-output -n rssw-busco busco -i $(repeatMaskerOut) $(BUSCOOpts) --out $(BUSCOOutDir)
 
-.PHONY: busco-analysis-noScaff
+.PHONY: busco-analysis
 
-busco-analysis-noScaff: $(BUSCONoScaffOutFile)
+busco-analysis: $(BUSCOOutFile)
