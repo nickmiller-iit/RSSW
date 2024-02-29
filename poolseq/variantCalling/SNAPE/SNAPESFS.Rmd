@@ -48,7 +48,7 @@ hist(maf,
      breaks = 100,
      main = "Folded site frequency spectrum",
      xlab = "minor allele frequency",
-     col = "firebrick2")
+     col = "firebrick3")
 
 ```
 

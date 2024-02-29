@@ -127,7 +127,8 @@ $(alignDir):
 
 ## Use the same assembly that we used for repeat masking
 
-genomeRef=../assembly/flyeRedundansNoReads/scaffolds.reduced.fa
+#genomeRef=../assembly/flyeRedundansNoReads/scaffolds.reduced.fa
+genomeRef=../assembly/RSSWDraftGenome.fasta
 
 alignments=$(addprefix $(alignDir)/,B.bam D.bam H.bam K.bam L.bam O.bam S.bam T.bam)
 
@@ -160,7 +161,8 @@ align: $(alignmentIndexes)
 
 ## Use bedtools to get the regions that are *not* identified by repeatmasker
 
-repeatsGFF=../repeats/maskedNoScaff/scaffolds.reduced.fa.out.gff
+#repeatsGFF=../repeats/maskedNoScaff/scaffolds.reduced.fa.out.gff
+repeatsGFF=../repeats/masked/RSSWDraftGenome.fasta.out.gff
 
 nonRepeatsBED=$(alignDir)/noRepeats.bed
 
@@ -225,60 +227,60 @@ $(mpileupFile): $(cleanAlignments) $(genomeRef) | $(variantDir)
 mpileup: $(mpileupFile)
 
 
-## Variant calling with MAPGD
-## MAPGD is not available in conda. Had to build it by hand (requires GSL).
+# ## Variant calling with MAPGD
+# ## MAPGD is not available in conda. Had to build it by hand (requires GSL).
 
-MAPGDBIN=MAPGD/bin/mapgd
+# MAPGDBIN=MAPGD/bin/mapgd
 
-## Dir to place the output
+# ## Dir to place the output
 
-MAPGDDir=$(variantDir)/MAPGD
+# MAPGDDir=$(variantDir)/MAPGD
 
-$(MAPGDDir):
-	if [ ! -d $(MAPGDDir) ]; then mkdir $(MAPGDDir); fi
+# $(MAPGDDir):
+# 	if [ ! -d $(MAPGDDir) ]; then mkdir $(MAPGDDir); fi
 
-## MAPGD requires a header from samtools to process the mpileup
+# ## MAPGD requires a header from samtools to process the mpileup
 
-MAPGDHeader=$(MAPGDDir)/mapgd.header
+# MAPGDHeader=$(MAPGDDir)/mapgd.header
 
-$(MAPGDHeader): $(cleanAlignments) | $(MAPGDDir)
-	conda run --no-capture-output -n rssw-minimap2-samtools samtools view -H $(filter %B.bam,$(cleanAlignments)) > $(MAPGDHeader)
+# $(MAPGDHeader): $(cleanAlignments) | $(MAPGDDir)
+# 	conda run --no-capture-output -n rssw-minimap2-samtools samtools view -H $(filter %B.bam,$(cleanAlignments)) > $(MAPGDHeader)
 
-## Next step is to reformat from mpileup to MAPGD .pro format
-## Pro file gets pretty huge, so compress it.
+# ## Next step is to reformat from mpileup to MAPGD .pro format
+# ## Pro file gets pretty huge, so compress it.
 
-MAPGDProFile=$(MAPGDDir)/allpops.pro.gz
+# MAPGDProFile=$(MAPGDDir)/allpops.pro.gz
 
-## Samples names can be handed to mapgd proview as a comma separated list.
-## Getting a comma separated list from a makefile variable is surprisingly tricky.
-## Stack overflow to the rescue:
-## https://stackoverflow.com/questions/7525589/create-comma-separated-lists-in-gnu-make
-## Hopefully the order of the samples has not changed with mpileup
+# ## Samples names can be handed to mapgd proview as a comma separated list.
+# ## Getting a comma separated list from a makefile variable is surprisingly tricky.
+# ## Stack overflow to the rescue:
+# ## https://stackoverflow.com/questions/7525589/create-comma-separated-lists-in-gnu-make
+# ## Hopefully the order of the samples has not changed with mpileup
 
-null  :=
-space := $(null) #
-comma := ,
+# null  :=
+# space := $(null) #
+# comma := ,
 
-## But apparenlty I'm not understanding what MAPGD wants
+# ## But apparenlty I'm not understanding what MAPGD wants
 
-MAPGDSampleNames := $(subst $(space),$(comma),$(basename $(notdir $(alignments))))
+# MAPGDSampleNames := $(subst $(space),$(comma),$(basename $(notdir $(alignments))))
 
-$(MAPGDProFile): $(mpileupFile) $(MAPGDHeader)
-	$(MAPGDBIN) proview -i $(mpileupFile) -H $(MAPGDHeader) | gzip -c > $(MAPGDProFile)
-#	$(MAPGDBIN) proview -i $(mpileupFile) -H $(MAPGDHeader) -l $(MAPGDSampleNames) | gzip -c > $(MAPGDProFile)
+# $(MAPGDProFile): $(mpileupFile) $(MAPGDHeader)
+# 	$(MAPGDBIN) proview -i $(mpileupFile) -H $(MAPGDHeader) | gzip -c > $(MAPGDProFile)
+# #	$(MAPGDBIN) proview -i $(mpileupFile) -H $(MAPGDHeader) -l $(MAPGDSampleNames) | gzip -c > $(MAPGDProFile)
 
 
-## MAPGD pool command estimates allele frequencies for pooled dats
-## -a flag controls log likelihood to accept as polymorphic
+# ## MAPGD pool command estimates allele frequencies for pooled dats
+# ## -a flag controls log likelihood to accept as polymorphic
 
-MAPGDOutFile=$(MAPGDDir)/allpops.mapgd.out.22.gz
+# MAPGDOutFile=$(MAPGDDir)/allpops.mapgd.out.22.gz
 
-$(MAPGDOutFile): $(MAPGDProFile)
-	zcat $(MAPGDProFile) | $(MAPGDBIN) pool -a 22 | gzip -c > $(MAPGDOutFile)
+# $(MAPGDOutFile): $(MAPGDProFile)
+# 	zcat $(MAPGDProFile) | $(MAPGDBIN) pool -a 22 | gzip -c > $(MAPGDOutFile)
 
-.PHONY: mapgd
+# .PHONY: mapgd
 
-mapgd: $(MAPGDOutFile)
+# mapgd: $(MAPGDOutFile)
 
 ## Variant calling with SNAPE-pooled
 
@@ -319,6 +321,8 @@ $(SNAPEDir):
 ##aa ab ac ad ae af ag ah ai aj ak al am an ao ap aq ar as at au av aw ax ay az ba bb bc bd be bf bg bh bi bj bk bl bm bn bo bp bq br bs bt bu bv bw bx by bz ca cb cc cd
 
 pileupLineCount = $(shell zcat $(pileupFile) | wc -l)
+
+
 
 snapeTmpInLines = $(shell echo "$(pileupLineCount) / 55" | bc)
 

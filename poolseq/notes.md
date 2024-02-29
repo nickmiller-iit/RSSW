@@ -52,8 +52,14 @@ After filtering for a posterior probability of polymorphism of 0.9, SNAPE-pooled
 
 Looking at the site frequency spectrum, SNAPE appears to be much less biased towards detecting high-heterozygosity sites than MAPGD, although it may not be entirely unbiased. The ability to detect lower-heterozygosity sites helps explain why SNAPE detects around 6 times as many polymorphic sites as MAPGD.
 
-
 Based on what we have seen here, decided to use the SNAPE-detected SNPs for further analysis.
+
+#### Update with revised genome assembly
+
+After polishing the genome with pilon and scaffolding with rascaf, needed to re run the SNP calling. Since snape-pooled turned out to be the best performing method, only applied snape-pooled to the new assembly.
+
+Running snape-pooled using the revised genome assembly yeilded 20,452,525 polymprhisms on 28,194 scaffolds using the 0.99 posterior probability cutoff.
+
 
 ## Fstats
 
