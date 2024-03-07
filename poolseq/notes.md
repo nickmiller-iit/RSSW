@@ -70,7 +70,7 @@ The R package `poolfstat` can compute FST and friends from pool-seq data. It tak
  
 These 2 operations take a while (roughly a day), so set up a script to run thatm and save the resulting `poolfstat::pooldata` object as a binary file in R's RDS format.
 
-Resulting data set contained 702,906 SNPs, which should be plenty! 
+Resulting data set contained 716,989 SNPs for the polised & scaffolded genome, which should be plenty! 
 
 ## PCA
 
@@ -78,6 +78,9 @@ As another approach to looking at population structure, try a PCA and see if sam
 
 ### Calling frequencies
 
-Our initial run with `SNAPE-pooled` combined all samples together. Now we will need to run it on each sample separately. To avoid a lot of unecessary work, we can look at only the sites that were previously called as polymorphic. An initial run on all previously called polymorphic sites threw up some oddities, so tried limiting to just the 702,906 thinned SNPs used for FST analysis.
+Our initial run with `SNAPE-pooled` combined all samples together. Now we will need to run it on each sample separately. To avoid a lot of unecessary work, we can look at only the sites that were previously called as polymorphic. An initial run on all previously called polymorphic sites threw up some oddities, so tried limiting to just the 716,989 thinned SNPs used for FST analysis.
 
+### Results
+
+A basic PCA is described in the R notebook. Short version, there's no apparent geographical structure to the variation.
 

@@ -404,12 +404,26 @@ $(includedSitesVCF): $(includedSitesList) $(cleanAlignments) $(genomeRef)
 
 vcf: $(includedSitesVCF)
 
+# Wrote an R script that prpares data for poolFstat by reading in from the VCF and subsampling to a density of no more than
+# 1 SNP per kb. Produces a binary R object that can be loaded directly
+
+
+fstatThinnedData=$(fstatDir)/pooldata.dat
+
+$(fstatThinnedData): $(includedSitesVCF)
+	cd $(fstatDir);	Rscript --vanilla prepPoolData.R
+
+.PHONY: thin-fstat-data
+
+thin-fstat-data: $(fstatThinnedData)
+
+
 #
 # Allele frequencies for PCA
 #
 # We will want the allele frequencies for each sample separately. We can do this by re-running snape-pooled on
 # pileups for each individual sample. Since snape-pooled is quite slow, we will only run it on the sites that were previously
-# identified as polymorphic. We already have this list for the fstat includedSitesFile
+# identified as polymorphic and thinned for poolfstat. We already can obtain this from the thinned data file.
 
 samplesSNAPEDir=$(SNAPEDir)/samples
 
@@ -419,6 +433,10 @@ $(samplesSNAPEDir):
 samplesSNAPEInFiles=$(addsuffix .pileup,$(subst $(alignDir),$(samplesSNAPEDir),$(cleanAlignments)))
 
 samplesSNAPETargetSNPs=$(samplesSNAPEDir)/thinned.sites
+
+$(samplesSNAPETargetSNPs): $(fstatThinnedData) | $(samplesSNAPEDir)
+	R -e "dat <- readRDS('$(fstatThinnedData)'); write.table(dat@snp.info[,1:2], col.names = F, row.names = F, quote = F, file = '$(samplesSNAPETargetSNPs)')"
+
 
 $(samplesSNAPEInFiles): $(cleanAlignments) $(samplesSNAPETargetSNPs) $(genomeRef) | $(samplesSNAPEDir)
 	conda run --no-capture-output -n rssw-minimap2-samtools samtools mpileup -f $(genomeRef) --positions $(samplesSNAPETargetSNPs) $(subst $(samplesSNAPEDir),$(alignDir),$(basename $@)) > $@

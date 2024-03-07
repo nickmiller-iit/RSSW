@@ -1,5 +1,5 @@
 ---
-title: "PCA analysis of ppol-seq allele frequencies"
+title: "PCA analysis of pool-seq allele frequencies"
 output:
   html_document:
     df_print: paged
@@ -9,7 +9,7 @@ output:
 
 F-stats analysis does not show any sign of population structure or isolation by ditance. Another way to look at this is to do a PCA of allele frequencies and see if there is any sign of samples clustering by gorgraphical distance.
 
-To estimate allele frequencies, `snape-pooled` was run on each sample individually. To start out, this was restricted to the 702,906 "thinned" SNPs used for FStats.
+To estimate allele frequencies, `snape-pooled` was run on each sample individually. To start out, this was restricted to the 716,989 "thinned" SNPs used for FStats.
 
 # Required Libraries
 
@@ -85,9 +85,18 @@ row.names(freqs.clean) <- freqs[which(!(is.na(apply(freqs[,4:11], 1, sum)))), 3]
 
 ```
 
+How many SNPS do we have in the data after cleaning for NAs?
+
 ```{r}
-p <- pca(freqs.clean, scale = T, center = T)
-p
+length(row.names(freqs.clean))
+
+```
+
+
+```{r}
+#p <- pca(freqs.clean, scale = T, center = T)
+p <- pca(freqs.clean)
+summary(p)
 ```
 
 A "biplot" of the samples on PCs 1 and 2

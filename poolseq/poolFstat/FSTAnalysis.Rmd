@@ -23,7 +23,7 @@ poolseq.dat <- readRDS("pooldata.dat")
 poolseq.dat
 ```
 
-We have a total of 702,906 SNPs
+We have a total of 716,989 SNPs
 
 # Global F~ST~
 
@@ -50,7 +50,7 @@ global.fst$se.fst
 
 So the overall F~ST~ is significantly greater than zero (the jacknife mean is > 2 * jacknife se away from zero), but the absolute value is extremely small.
 
-This makes sense because with \> 700,000 SNPs we whould have the power to detect even very small F~ST~ that is greater than zero.
+This makes sense because with \> 700,000 SNPs we should have the power to detect even very small F~ST~ that is greater than zero.
 
 # Paiwise F~ST~
 
