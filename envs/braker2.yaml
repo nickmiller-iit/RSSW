@@ -1,0 +1,6 @@
+name: rssw-braker2
+channels:
+ - conda-forge
+ - bioconda
+dependencies:
+ - braker2=2.1.2
