@@ -1,0 +1,5 @@
+name: rssw-ncbi-datasets
+channels:
+ - conda-forge
+dependencies:
+ - ncbi-datasets-cli=16.6.0
