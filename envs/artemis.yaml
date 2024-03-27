@@ -1,0 +1,6 @@
+name: rssw-artemis
+channels:
+ - conda-forge
+ - bioconda
+dependencies:
+ - artemis=18.0.2
