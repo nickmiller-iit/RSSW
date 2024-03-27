@@ -88,9 +88,19 @@ brakerOut=braker/augustus.hints.aa
 $(brakerOut): $(rnaSeqAlignmentsIDX) $(maskedGenome)
 	conda run --no-capture-output -n rssw-braker2 braker.pl $(braker2Options) --genome=$(maskedGenome) --prot_seq=$(bollWeevilProteins) --bam=$(rnaSeqAlignments)
 
+
+## Link the final annotation protein FASTA and annotation GFF to the top of the annotation dir
+## Use the proteins as the trigger
+
+annotationsFinal=braker.proteins.fasta
+
+$(annotationsFinal): $(brakerOut)
+	ln $(brakerOut) $(annotationsFinal)
+	ln braker/Smicronyx_fulvus/augustus.hints.gff3 braker.genes.gff3
+
 .PHONY: annotations
 
-annotations: $(brakerOut)
+annotations: $(annotationsFinal)
 
 # BUSCO analysis of predicted proteins
 
