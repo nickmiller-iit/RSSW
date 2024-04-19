@@ -20,7 +20,22 @@ Running diamond blastp with each of the example proteins produces hits to two pr
  * jg42936.t1 1688 amino acids, scaffold = scaffold_26039 
  * jg12353.t1 1418 amino acids, scaffold = scaffold_266
  
- Running both of these prtein sequences through uniprot blast and interpro scan on the web indicates that jg42936.t1 is the voltage gated sodium channel alpha subunit, whereas jg12353.t1 is a "sodium leak channel"
+ Running both of these protein sequences through uniprot blast and interpro scan on the web indicates that jg42936.t1 is the voltage gated sodium channel alpha subunit, whereas jg12353.t1 is a "sodium leak channel"
  
-However, multiple sequence alignment to the example sodium channles looks pretty nasty, lots if divergent residues
+However, multiple sequence alignment to the example sodium channels looks pretty nasty, lots of divergent residues
  
+### Gene model editing
+
+Galaxy Europe (usegalaxy.eu) make it fairly painless to set up a jbrowse/Apollo instance for manual editing of gene models. We only need to deal with the scaffold on which our putative sodium channel gene is located.
+
+Stared by making a working dir and extracting/creating:
+ * scaffold_26039
+ * samtools faidx index of scaffold_26039
+ * Gene annotations for scaffold_26039
+ * Repeat annotations for scaffold_26039
+ * Aligned RNA-Seq reads for scaffold_26039
+ * Bam index of aligned RNA-Seq reads for scaffold_26039
+ * GFF of exonerate alignments of example sodium channel proteins to scaffold_26039
+ 
+ **Note** Exonerate alignments were run as:
+ `exonerate -E --model protein2dna:bestfit --showtargetgff yes --subopt no ../exampleChannels/A0A6J2XC81.fasta ./scaffold_26039.fasta > A0A6J2XC81.exonerate`
