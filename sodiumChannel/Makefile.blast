@@ -1,0 +1,24 @@
+# tblastn search of the genome for voltage-gated sodium channel parts
+
+genome=../assembly/RSSWDraftGenome.fasta
+
+blastDbDir=blastDb
+
+$(blastDbDir):
+	if [ ! -d $(blastDbDir) ]; then mkdir $(blastDbDir); fi
+
+# blast makes multiple files with different suffixes. The .nhr file is the "header" use this as the target to build the database
+
+blastDb=$(blastDbDir)/$(notdir $(basename $(genome))).nhr
+
+$(blastDb): $(genome) | $(blastDbDir)
+	conda run --no-capture-output -n rssw-blast makeblastdb -dbtype nucl -in $(genome) -out $(basename $(blastDb))
+
+.PHONY: database
+
+database: $(blastDb)
+
+.PHONY: test
+
+test:
+	echo $(blastDb)
