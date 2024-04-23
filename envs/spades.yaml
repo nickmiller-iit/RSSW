@@ -1,0 +1,5 @@
+name: rssw-spades
+channels:
+ - bioconda
+dependencies:
+ - spades=3.13.1
