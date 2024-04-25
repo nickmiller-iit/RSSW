@@ -2,4 +2,5 @@ name: rssw-spades
 channels:
  - bioconda
 dependencies:
+ - python=3.9 
  - spades=3.13.1
