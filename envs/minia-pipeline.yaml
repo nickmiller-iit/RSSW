@@ -1,0 +1,13 @@
+name: rssw-minia-pipeline
+channels:
+ - conda
+ - bioconda
+dependencies:
+ - python=2.7.17
+ - scipy
+ - mathstats
+ - pysam
+# Note. This conda env does not install minia
+# Although there is a conda package for minia, it does not install the minia pipeline, which integrates mutiple kmer sizes
+# This env provides the necessary python environment (python 2 and variaous needed libs) to run the minia pipeline.
+# The pipeline, including minia and other executables can be installed from
