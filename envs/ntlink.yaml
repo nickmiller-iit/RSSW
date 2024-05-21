@@ -1,0 +1,6 @@
+name: rssw-ntlink
+channels:
+ - bioconda
+ - conda-forge
+dependencies:
+ - ntlink
