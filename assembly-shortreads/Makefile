@@ -97,6 +97,7 @@ scaffoldInputContigs=$(redundansOutput)
 
 scaffoldLongReads=../assembly/reads/Weevil_m64108e_220407_204305.hifi_reads.fastq.gz
 
+# This never gets made!
 scaffoldOutput=$(scaffoldDir)/scaffolds.fa
 
 # z is minimum length of contig to scaffold
@@ -113,3 +114,24 @@ $(scaffoldOutput): $(scaffoldInputContigs) $(scaffoldLongReads) | $(scaffoldDir)
 .PHONY: scaffold
 
 scaffold: $(scaffoldOutput)
+
+# Final step: clean up scaffold names and make a copy of the final assembly with a user friendly name in the top dir
+
+finalAssembly=shortReadAssemblyScaffolded.fasta
+
+# The ntLink scaffolded output name is hard-coded and will vary depending on the paramater values used to run ntLink
+# the file ends in .ntLink.scaffolds.fa
+# The following is a bit risky, because it assumes that if there are multiple scaffold files we want the newst one
+
+ntLinkScaffs=$(shell ls -c $(scaffoldDir)/*.ntLink.scaffolds.fa | head -n1)
+
+$(finalAssembly):
+	cat $(ntLinkScaffs) | sed 's/None-None//' | sed 's/>/>contig_/' | sed 's/contig_ntLink/scaffold/' > $(finalAssembly)
+
+.PHONY: final
+
+final: $(finalAssembly)
+
+
+
+#cat scaffolded/contigs.reduced.fa.k32.w100.z400.ntLink.scaffolds.fa | sed 's/None-None//' | sed 's/>/>contig_/' | sed 's/contig_ntLink/scaffold/'
