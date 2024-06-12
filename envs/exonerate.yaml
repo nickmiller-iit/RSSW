@@ -1,0 +1,5 @@
+name: rssw-exonerate
+channels:
+ - bioconda
+dependencies:
+ - exonerate=2.4.0

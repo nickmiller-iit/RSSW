@@ -1,0 +1,162 @@
+# tblastn search of the genome for voltage-gated sodium channel parts
+
+genome=../assembly-shortreads/shortReadAssemblyScaffolded.fasta
+
+blastDbDir=shortReadAssemblyBlastDB
+
+$(blastDbDir):
+	if [ ! -d $(blastDbDir) ]; then mkdir $(blastDbDir); fi
+
+# blast makes multiple files with different suffixes. The .nhr file is the "header" use this as the target to build the database
+
+blastDb=$(blastDbDir)/shortReadAssembly.nhr
+
+$(blastDb): $(genome) | $(blastDbDir)
+	conda run --no-capture-output -n rssw-blast makeblastdb -dbtype nucl -in $(genome) -out $(basename $(blastDb))
+
+.PHONY: database
+
+database: $(blastDb)
+
+
+# Blast searches using weevil sodium channel genes as queries.
+
+blastResultsDir=blastWeevilsVSShortReadAssembly
+
+$(blastResultsDir):
+	if [ ! -d $(blastResultsDir) ]; then mkdir $(blastResultsDir); fi
+
+
+riceWeevilResults=$(blastResultsDir)/riceWeevil.hits
+
+riceWeevilQuery=exampleChannels/A0A6J2XC81.fasta
+
+$(riceWeevilResults): $(riceWeevilQuery) $(blastDb) | $(blastResultsDir)
+	conda run --no-capture-output -n rssw-blast tblastn -db $(basename $(blastDb)) -query $(riceWeevilQuery) > $(riceWeevilResults)
+
+redPalmWeevilResults=$(blastResultsDir)/palmWeevil.hits
+
+redPalmWeevilQuery=exampleChannels/A0A834MPJ1.fasta
+
+$(redPalmWeevilResults): $(redPalmWeevilQuery) $(blastDb) | $(blastResultsDir)
+	conda run --no-capture-output -n rssw-blast tblastn -db  $(basename $(blastDb)) -query $(redPalmWeevilQuery) > $(redPalmWeevilResults)
+
+.PHONY: search
+
+search:  $(riceWeevilResults) $(redPalmWeevilResults)
+
+# Extract contigs/scaffolds with putative fragments of the VGSC gene from the short read assembly
+# NB the list of contigs/scaffold is based on manual inspection of BLAST results cannot be built automatically
+
+putativeSodiumChannelFragments=contig_95372 scaffold_51779 contig_245694 contig_322045 scaffold_34427 contig_80021 contig_195328
+
+putativeSodiumChannelFragmentsDir=putativeChannelFragmentsShortReadAssembly
+
+$(putativeSodiumChannelFragmentsDir):
+	if [ ! -d $(putativeSodiumChannelFragmentsDir) ]; then mkdir $(putativeSodiumChannelFragmentsDir); fi
+
+genomeIndex=$(genome).fai
+
+$(genomeIndex): $(genome)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools faidx $(genome)
+
+putativeFragmentsFASTASeqs=$(addprefix $(putativeSodiumChannelFragmentsDir)/,$(addsuffix .fasta,$(putativeSodiumChannelFragments)))
+
+$(putativeFragmentsFASTASeqs): $(genomeIndex) | $(putativeSodiumChannelFragmentsDir)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools faidx $(genome) $(basename $(notdir $@))  > $@
+
+.PHONY: fragment-seqs
+
+fragment-seqs: $(putativeFragmentsFASTASeqs)
+
+# Align rice and palm weevil proteins to contigs & scaffolds with miniprot
+
+# riceWeevilAlignments=$(subst fasta,riceWeevil.gff,$(putativeFragmentsFASTASeqs))
+
+# $(riceWeevilAlignments): $(putativeFragmentsFASTASeqs)
+# 	conda run --no-capture-output -n rssw-miniprot miniprot -t8 --gff-only $(subst riceWeevil.gff,fasta,$@) $(riceWeevilQuery) > $@
+
+
+# palmWeevilAlignments=$(subst fasta,palmWeevil.gff,$(putativeFragmentsFASTASeqs))
+
+# $(palmWeevilAlignments): $(putativeFragmentsFASTASeqs)
+# 	conda run --no-capture-output -n rssw-miniprot miniprot -t8 --gff-only $(subst palmWeevil.gff,fasta,$@) $(redPalmWeevilQuery) >
+$@
+
+# Align rice and palm weevil proteins to contigs & scaffolds with miniprot
+
+riceWeevilAlignments=$(subst fasta,riceWeevil.exonerate,$(putativeFragmentsFASTASeqs))
+
+$(riceWeevilAlignments): $(putativeFragmentsFASTASeqs)
+	conda run --no-capture-output -n rssw-exonerate exonerate -t $(subst riceWeevil.exonerate,fasta,$@)  -T dna -q $(riceWeevilQuery) -Q protein -m protein2genome --showquerygff yes --showtargetgff yes  > $@
+
+
+palmWeevilAlignments=$(subst fasta,palmWeevil.exonerate,$(putativeFragmentsFASTASeqs))
+
+$(palmWeevilAlignments): $(putativeFragmentsFASTASeqs)
+	conda run --no-capture-output -n rssw-exonerate exonerate -t $(subst palmWeevil.exonerate,fasta,$@)  -T dna -q $(redPalmWeevilQuery) -Q protein -m protein2genome --showquerygff yes --showtargetgff yes > $@
+
+
+
+.PHONY: exonerate
+
+exonerate: $(riceWeevilAlignments) $(palmWeevilAlignments)
+
+## Exonerate embeds GFF2 output. Use grep on lines that start with contig name to extract the GFF
+
+riceWeevilGFF2=$(subst fasta,riceWeevil.gff2,$(putativeFragmentsFASTASeqs))
+
+$(riceWeevilGFF2): $(riceWeevilAlignments)
+	echo "##gff-version 2" > $@
+	grep ^$(basename $(basename $(notdir $@))) $(subst gff2,exonerate,$@) >> $@
+
+palmWeevilGFF2=$(subst fasta,palmWeevil.gff2,$(putativeFragmentsFASTASeqs))
+
+$(palmWeevilGFF2): $(palmWeevilAlignments)
+	echo "##gff-version 2" > $@
+	grep ^$(basename $(basename $(notdir $@))) $(subst gff2,exonerate,$@) >> $@
+
+
+.PHONY: gff2
+
+gff2: $(riceWeevilGFF2) $(palmWeevilGFF2)
+
+## Fix exonerate GFF output so exons have mRNA parents, etc. Save as GFF3
+
+#gff3Files=$(subst gff2,gff3,$(riceWeevilGFF2) $(palmWeevilGFF2))
+
+riceWeevilGFF3=$(subst gff2,gff3,$(riceWeevilGFF2))
+
+$(riceWeevilGFF3): $(riceWeevilGFF2)
+	conda run --no-capture-output -n rssw-agat agat_convert_sp_gxf2gxf.pl --gff $(subst gff3,gff2,$@) --output $@.tmp
+	conda run --no-capture-output -n rssw-agat agat_sp_manage_IDs.pl --gff $@.tmp --prefix $(basename $(basename $(notdir $@)))_ --output $@
+	rm *.log $@.tmp
+
+palmWeevilGFF3=$(subst gff2,gff3,$(palmWeevilGFF2))
+
+$(palmWeevilGFF3): $(palmWeevilGFF2)
+	conda run --no-capture-output -n rssw-agat agat_convert_sp_gxf2gxf.pl --gff $(subst gff3,gff2,$@) --output $@.tmp
+	conda run --no-capture-output -n rssw-agat agat_sp_manage_IDs.pl --gff $@.tmp --prefix $(basename $(basename $(notdir $@)))_ --output $@
+	rm *.log $@.tmp
+
+
+
+.PHONY: gff3
+
+gff3: $(riceWeevilGFF3) $(palmWeevilGFF3)
+
+## Combine GFF3 for each example weevil protein into a single file
+
+riceWeevilCombinedGFF3=$(putativeSodiumChannelFragmentsDir)/riceWeevil.gff
+
+palmWeevilCombinedGFF3=$(putativeSodiumChannelFragmentsDir)/palmWeevil.gff
+
+$(riceWeevilCombinedGFF3): $(riceWeevilGFF3)
+	conda run --no-capture-output -n rssw-agat agat_sp_merge_annotations.pl $(addprefix --gff ,$(riceWeevilGFF3)) --output $(riceWeevilCombinedGFF3)
+
+$(palmWeevilCombinedGFF3): $(palmWeevilGFF3)
+	conda run --no-capture-output -n rssw-agat agat_sp_merge_annotations.pl $(addprefix --gff ,$(palmWeevilGFF3)) --output $(palmWeevilCombinedGFF3)
+
+.PHONY: combine-gff
+
+combine-gff: $(riceWeevilCombinedGFF3) $(palmWeevilCombinedGFF3)

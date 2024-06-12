@@ -1,0 +1,6 @@
+name: rssw-agat
+channels:
+ - conda-forge
+ - bioconda
+dependencies:
+ - agat
