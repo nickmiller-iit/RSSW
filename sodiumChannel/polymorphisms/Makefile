@@ -96,9 +96,42 @@ $(SNAPEDir):
 snapeCombinedOut=$(SNAPEDir)/combined.out
 
 # Note run SNAPE and filter for calls with posterior prob >= 0.99 in one go
-$(snapeCombinedOut): $(combinedPileupFile) $(SNAPEDir)
+$(snapeCombinedOut): $(combinedPileupFile) | $(SNAPEDir)
 	zcat $(combinedPileupFile) | $(SNAPEBin) -nchr 480 -fold folded -priortype flat -noextremes | awk '{if ( 1 - ( (1 - $$9) + $$10 ) >= 0.99) {print $$0}}' > $(snapeCombinedOut)
 
 .PHONY: snape-combined
 
 snape-combined: $(snapeCombinedOut)
+
+# Run SNAPE for each individual smaple, only need to consider the polymorphic sites previously identified
+
+polySites=$(SNAPEDir)/polymorphic.sites
+
+$(polySites): $(snapeCombinedOut)
+	cut -f1,2 $(snapeCombinedOut) > $(polySites)
+
+samplesSNAPEDir=$(SNAPEDir)/samples
+
+$(samplesSNAPEDir):
+	if [ ! -d $(samplesSNAPEDir) ]; then mkdir $(samplesSNAPEDir); fi
+
+samplesSNAPEInFiles=$(addsuffix .pileup,$(subst $(alignDir),$(samplesSNAPEDir),$(alignments)))
+
+
+$(samplesSNAPEInFiles): $(alignments) $(polySites) $(srGenome) | $(samplesSNAPEDir)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools mpileup -f $(srGenome) --positions $(polySites) $(subst $(samplesSNAPEDir),$(alignDir),$(basename $@)) > $@
+
+
+.PHONY: pileups
+
+pileups: $(samplesSNAPEInFiles)
+
+samplesSNAPEOutFiles=$(subst .pileup,.out,$(samplesSNAPEInFiles))
+
+$(samplesSNAPEOutFiles): $(samplesSNAPEInFiles)
+	cat $(subst .out,.pileup,$@) | $(SNAPEBin) -nchr 60 -fold folded -priortype flat -trust 1 > $@
+
+
+.PHONY: snape-samples
+
+snape-samples: $(samplesSNAPEOutFiles)
