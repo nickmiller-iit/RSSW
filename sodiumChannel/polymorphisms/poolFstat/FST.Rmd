@@ -1,0 +1,78 @@
+---
+title: "FST analysis of sidium channel polymorphic sites"
+output:
+  html_document:
+    df_print: paged
+---
+
+Using `poolfstat` we can comput F~ST~ values both globally and pairwise between populations. If there's slection acting on the sodium channel gene, it might show up here.
+
+# Libraries
+
+```{r}
+library(poolfstat)
+```
+
+# Read in data
+
+```{r}
+vcfFile <- "includedSites.vcf"
+min.cov <- 10 # min coverage to include a site
+pool.names <- c("B", "D", "H", "K", "L", "O", "S", "T") # order as in VCF file
+pool.sizes <- rep(60, 8) # 30 diploids per pool
+dat <- vcf2pooldata(vcf.file = vcfFile, 
+                  min.cov.per.pool = min.cov, 
+                  poolnames = pool.names, 
+                  poolsizes = pool.sizes)
+dat
+```
+
+# F~ST~
+
+## Global F~ST~
+
+Compute "global" F~ST~. Computes an overall valuse, but also values for each SNP, which is out main interest here.
+
+```{r}
+global.fst <- computeFST(dat,
+                         nsnp.per.bjack.block = 1)
+```
+
+Let's take a look at the distribution
+
+```{r}
+hist(global.fst$snp.FST, 
+     breaks = 25,
+     col = "forestgreen")
+
+```
+### Outliers?
+
+There is no screamingly obvious evidence for outliers. If we look out on the right tail, there are a couple of instances of F~ST~ > 0.15 that *might* if we are being generous, be considered outliers. Where are they located?
+
+```{r}
+dat@snp.info[global.fst$snp.FST > 0.15,]
+
+```
+Interesting that they are fairly close together on the same contig, but that doesn't really prove very much.
+
+## Pairwise F~ST~
+
+Might be worth looking to see if ouliers assiciate with particular pops
+
+```{r}
+pairwise.fst <- compute.pairwiseFST(dat,
+                                    output.snp.values = T,
+                                    nsnp.per.bjack.block = 1)
+
+```
+
+Again, let's take a look at the distribution
+
+```{r}
+hist(pairwise.fst@PairwiseSnpFST, 
+     breaks = 50,
+     col = "azure")
+
+```
+No obvious signs of outliers in the histogram here.
