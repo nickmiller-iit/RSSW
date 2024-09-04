@@ -19,3 +19,9 @@ Pretty much a repeat of what we did of the whole genome / primary assembly. Noth
 ## PCA
 
 See the R notebook for details - no signs of any clustering of samples.
+
+## PoolFsat
+
+See the R notbook for details. No obvious evidence of outlier F~ST~s that might indicate selection.
+
+As an aside, F~ST~ outlier methods can't really be applied here since we don't have heterozygosity at each locus.

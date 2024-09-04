@@ -161,3 +161,4 @@ $(polymorphicSitesVCF): $(polySites) $(alignments) $(srGenome) | $(fstatDir)
 .PHONY: vcf
 
 vcf: $(polymorphicSitesVCF)
+
