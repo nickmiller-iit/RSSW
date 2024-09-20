@@ -162,3 +162,26 @@ $(polymorphicSitesVCF): $(polySites) $(alignments) $(srGenome) | $(fstatDir)
 
 vcf: $(polymorphicSitesVCF)
 
+## Looking for synonymous/non-synonymous changes
+
+## Mostly done in R, but we do need an indexed fasta file of the contigs and scaffolds.
+
+synonymousSitesDir=synonymousSites
+
+$(synonymousSitesDir):
+	if [ ! -d $(synonymousSitesDir) ]; then mkdir $(synonymousSitesDir); fi
+
+targetContigsFasta=$(synonymousSitesDir)/sodiumChannelFragments.fasta
+
+$(targetContigsFasta): $(srGenome) | $(synonymousSitesDir)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools faidx $(srGenome) $(targetContigs) > $@
+
+
+targetContigsFastaIdx=$(targetContigsFasta).fai
+
+$(targetContigsFastaIdx): $(targetContigsFasta)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools faidx $(targetContigsFasta)
+
+.PHONY: synonymous-sites-fasta
+
+synonymous-sites-fasta: $(targetContigsFastaIdx)
