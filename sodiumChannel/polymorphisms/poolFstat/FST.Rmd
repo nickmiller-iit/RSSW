@@ -1,0 +1,181 @@
+---
+title: "FST analysis of sidium channel polymorphic sites"
+output:
+  html_document:
+    df_print: paged
+---
+
+Using `poolfstat` we can comput F~ST~ values both globally and pairwise between populations. If there's slection acting on the sodium channel gene, it might show up here.
+
+# Libraries
+
+```{r}
+library(poolfstat)
+library(dplyr)
+```
+
+# Read in data
+
+```{r}
+vcfFile <- "includedSites.vcf"
+min.cov <- 10 # min coverage to include a site
+pool.names <- c("B", "D", "H", "K", "L", "O", "S", "T") # order as in VCF file
+pool.sizes <- rep(60, 8) # 30 diploids per pool
+dat <- vcf2pooldata(vcf.file = vcfFile, 
+                  min.cov.per.pool = min.cov, 
+                  poolnames = pool.names, 
+                  poolsizes = pool.sizes)
+dat
+```
+
+# F~ST~
+
+## Global F~ST~
+
+Compute "global" F~ST~. Computes an overall valuse, but also values for each SNP, which is out main interest here.
+
+```{r}
+global.fst <- computeFST(dat,
+                         nsnp.per.bjack.block = 1)
+```
+
+Let's take a look at the distribution
+
+```{r}
+hist(global.fst$snp.FST, 
+     breaks = 25,
+     col = "forestgreen")
+
+```
+### Outliers?
+
+There is no screamingly obvious evidence for outliers. If we look out on the right tail, there are a couple of instances of F~ST~ > 0.15 that *might* if we are being generous, be considered outliers. Where are they located?
+
+```{r}
+dat@snp.info[global.fst$snp.FST > 0.15,]
+
+```
+Interesting that they are fairly close together on the same contig, but that doesn't really prove very much.
+
+## Pairwise F~ST~
+
+Might be worth looking to see if ouliers assiciate with particular pops
+
+```{r}
+pairwise.fst <- compute.pairwiseFST(dat,
+                                    output.snp.values = T,
+                                    nsnp.per.bjack.block = 1)
+
+```
+
+Again, let's take a look at the distribution
+
+```{r}
+hist(pairwise.fst@PairwiseSnpFST, 
+     breaks = 50,
+     col = "azure")
+
+```
+No obvious signs of outliers in the histogram here.
+
+## F~ST~ *vs* heterozygosity
+
+The Beaumont & Nichols approach to outliers F~ST~ looks at ~FST~ given heterozygosity. B&M and most others use simulation to define the neutral distribution of F~ST~ conditional on heterozygosity. That's going to be tricky for pool-seq data. However, Flanagan & Jones (2017) propose smoothed quantiles derived from the empirical data as an alternative approach to identifying outliers, so we could try that.
+
+
+### Heterozygosity
+
+We can get this from the SNAPE-pooled output, which provides estimates of minor allele frequency, and then simply do $H = 2p(1-p)$. However, because we impose a minimum coverage criterion for poolfstat, not all to the sites identified by SNAPE have F~ST~ measures - we will have to do a bit of wrangling to get F~ST~ and H matched up for the corresponding loci.
+
+First, get the contig and site info from the pooldata object and the F~ST~ estimates from the results of `computeFST`. **IMPORTANT** I am assuming here that loci are in the same order in both objects, this seems reasonable but will mess things up badly if it is not true.
+
+```{r}
+fst.het.table <- data.frame(contig = dat@snp.info$Chromosome,
+                            position = dat@snp.info$Position,
+                            fst = global.fst$snp.FST)
+```
+
+Get the called frequencies from SNAPE
+
+```{r}
+snapeOutFile <- "../variantCalling/SNAPE/combined.out"
+snape.calls <- read.table(snapeOutFile)
+snape.freqs <- snape.calls[,c(1, 2, 11),]
+names(snape.freqs) <- c("contig", "position", "p")
+```
+
+Use contig and position to create a key in each `data.fram` and join using dplyr.
+
+```{r}
+fst.het.table$key <- paste(fst.het.table$contig, fst.het.table$position, sep = "_")
+snape.freqs$key <- paste(snape.freqs$contig, snape.freqs$position, sep = "_")
+fst.het.table <- left_join(fst.het.table, snape.freqs, by = "key")
+fst.het.table <- fst.het.table[,c(1, 2, 3, 7)]
+names(fst.het.table) <- c("contig", "position", "fst", "p")
+
+```
+
+Now get H from allele frequency
+
+```{r}
+fst.het.table$H <- 2* fst.het.table$p * (1 - fst.het.table$p)
+
+```
+
+Plot F~ST~ vs H
+
+```{r}
+plot(fst.het.table$H, 
+     fst.het.table$fst,
+     xlab = "Heterozygosity",
+     ylab = "FST")
+
+```
+
+Flanagan & Jones' (2017) package `fsthet` allows the computation of smoothed quantiles. It is intended for individual-typed data, but we can still use some of the functionality.
+
+Poking around in the package help and code is a little confusing due to the references to bootstrapped values. However the default invocation of `fsthet` does not run bootstrapping and the paper doesn't say much about it either.
+
+Nevertheless, many of the functions expect a list of as produced by `fsthet::fst.boot()`. This normally takes an input derived from genepop input, which we obviously don't have. The function below should produce the needed list.
+
+```{r}
+# fst and h are equal length vectors of fst and heterozygosity per locus
+fake.fst.boot <- function(fst, h, bootstrap = T){
+  h.f.table <- data.frame(Ht = h, Fst = fst)
+  if (bootstrap){
+    h.f.table <- h.f.table[sample(1:length(h.f.table$Ht), size = length(h.f.table$Ht), replace = T), ]
+  }
+  h.f.table <- h.f.table[order(h.f.table$Ht), ]
+  bins <- make.bins(h.f.table)
+  fst.CI <- find.quantiles(bins$bins, bins$bin.fst)
+  return(list(Fsts = h.f.table, Bins = bins$bins, fst.CI))
+
+  }
+```
+
+Make the bootstrapped list
+
+```{r}
+boot.list <- fake.fst.boot(fst.het.table$fst, fst.het.table$H, bootstrap = F)
+```
+
+Use fsthet's plottng function
+
+```{r}
+plotting.cis(fst.het.table, 
+             boot.list, 
+             Ht.name = "H", 
+             Fst.name = "fst", 
+             make.file = F)
+
+```
+
+There is also a function `fsthet::find.outliers` that finds outliers of the smoothed quantiles
+
+```{r}
+find.outliers(data.frame(Ht = fst.het.table$H, Fst = fst.het.table$fst), boot.list)
+
+```
+
+
+Apparently there are none. Not sure how that ties up with the quantile plot above.

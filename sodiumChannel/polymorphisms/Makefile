@@ -135,3 +135,53 @@ $(samplesSNAPEOutFiles): $(samplesSNAPEInFiles)
 .PHONY: snape-samples
 
 snape-samples: $(samplesSNAPEOutFiles)
+
+## Prep files for poolfstat
+
+## Pool fstat accepts a VCF file with AD fields to provide read counts.
+## BCFtools mpileup can produce the needed VCF, and we can give it a list of sites to include
+## Here, produce a VCF from the polymorphic sites identified by SNAPE
+
+
+
+fstatDir=poolFstat
+
+
+$(fstatDir):
+	if [ ! -d $(fstatDir) ]; then mkdir $(fstatDir); fi
+
+
+#includedSitesList=$(fstatDir)/includedSites
+
+polymorphicSitesVCF=$(fstatDir)/includedSites.vcf
+
+$(polymorphicSitesVCF): $(polySites) $(alignments) $(srGenome) | $(fstatDir)
+	conda run --no-capture-output -n rssw-bcftools bcftools mpileup -R $(polySites) --skip-indels  --fasta-ref $(srGenome) -a FORMAT/AD,INFO/AD $(alignments)  > $(polymorphicSitesVCF)
+
+.PHONY: vcf
+
+vcf: $(polymorphicSitesVCF)
+
+## Looking for synonymous/non-synonymous changes
+
+## Mostly done in R, but we do need an indexed fasta file of the contigs and scaffolds.
+
+synonymousSitesDir=synonymousSites
+
+$(synonymousSitesDir):
+	if [ ! -d $(synonymousSitesDir) ]; then mkdir $(synonymousSitesDir); fi
+
+targetContigsFasta=$(synonymousSitesDir)/sodiumChannelFragments.fasta
+
+$(targetContigsFasta): $(srGenome) | $(synonymousSitesDir)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools faidx $(srGenome) $(targetContigs) > $@
+
+
+targetContigsFastaIdx=$(targetContigsFasta).fai
+
+$(targetContigsFastaIdx): $(targetContigsFasta)
+	conda run --no-capture-output -n rssw-minimap2-samtools samtools faidx $(targetContigsFasta)
+
+.PHONY: synonymous-sites-fasta
+
+synonymous-sites-fasta: $(targetContigsFastaIdx)

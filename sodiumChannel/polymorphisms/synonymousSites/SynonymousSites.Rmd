@@ -1,0 +1,236 @@
+---
+title: "Synonymous / non-synonymous sites"
+output:
+  html_document:
+    df_print: paged
+---
+
+Having found some parts of the voltage-gated sodium channel gene and a few hundred SNPs withing those contigs, it would be nice to know if we have any potential non-synonymous changes.
+
+# Libraries
+
+```{r warning=FALSE}
+library(VariantAnnotation)
+library(txdbmaker)
+library(stringr)
+library(dplyr)
+library(purrr)
+```
+
+# Data files
+
+```{r}
+fragmentsFasta <- "sodiumChannelFragments.fasta"
+fragmentsGFF <- "../../putativeChannelFragmentsShortReadAssembly/sodiumChannelFragments.gff"
+fragmentsVCF <- "../poolFstat/includedSites.vcf"
+```
+
+# Read in the data
+
+```{r}
+snps <- readVcf(fragmentsVCF)
+```
+
+```{r}
+dna.sequence <- FaFile(fragmentsFasta)
+```
+
+```{r}
+gene.info <- makeTxDbFromGFF(fragmentsGFF)
+
+```
+
+
+# Analyze for synonymous / non-synonymous
+
+```{r}
+coding.info <- predictCoding(query = snps,
+                             subject = gene.info,
+                             seqSource = dna.sequence)
+```
+
+Due to a peculiarity of how the alt alleles are represented in the VCF file (e.g. A,*) there is an extra entry for most sites that is marked "not translated". Get rid of these. (NOT RUN, fixed later)
+
+```{r}
+#coding.info <- coding.info[which(mcols(coding.info)$CONSEQUENCE != "not translated")]
+```
+
+
+How many synonymous/non-synonymous do we have?
+
+```{r}
+table(mcols(coding.info)$CONSEQUENCE)
+
+```
+
+Interestingly, we also have one nonsense polymorphism that introduces a stop codon.
+
+List out the non-synonymous and nonsense polymorphisms.
+
+```{r}
+names(coding.info[which(mcols(coding.info)$CONSEQUENCE == "nonsynonymous")])
+
+```
+```{r}
+names(coding.info[which(mcols(coding.info)$CONSEQUENCE == "nonsense")])
+
+```
+Hmmm, there is something fishy here - two of our non-synonymous SNPs are at the same position. Checking the raw VCF (which was prepared for poolfstat) the site does appear to be trialleleic. Digging some more, I see what is happening here. In the VCF, where there is a third allele, the read count is generally 1 or 2. Since the VCf is not explicitly filtered for vallid alleles, a sequencing error can sneak in.
+
+Solution: Filter out extra "alleles" that are not the seregating bases called by SNAPE-pooled, getting rid of likely sequencing erors and just retaining the bases that were called as SNPs
+
+```{r}
+snapeSNPsFile <- "../variantCalling/SNAPE/combined.out"
+snape.snps <- read.table(snapeSNPsFile)
+names(snape.snps) <- c("scaffold",
+                       "pos",
+                       "ref",
+                       "ref.count",
+                       "alt.count",
+                       "ref.qual",
+                       "alt.qual",
+                       "top.two.nucs",
+                       "1-p(0)",
+                       "p(1)",
+                       "frequency")
+```
+
+Set up a key based on scaffold and position
+
+
+```{r}
+snape.snps$key <- paste(snape.snps$scaffold, 
+                        snape.snps$pos, 
+                        sep = ":")
+
+```
+Filter the snape SNPs info to just the sites with entries in `coding.info` - requires some gymnastics to get the names of the `coding.info` entries without the underscore followed by segregating bases.
+
+```{r}
+tmp <- paste(str_split(names(coding.info), 
+                       "_", 
+                       simplify = T)[,1], 
+             str_split(names(coding.info), 
+                       "_", 
+                       simplify = T)[,2], 
+             sep = "_")
+
+#snape.snps <- snape.snps[snape.snps$key %in% tmp,]
+
+
+```
+
+Next we need a `data.frame` with one row per entry in `coding.info` that contains the `varAllele` value, plus scaffold, position as a key to use as a left join with the snape snps. We also need to get the strand info so we can convert the variant.allele back to the same strans as the SNAPE info
+
+```{r}
+coding.info.variants <- data.frame(key = paste(str_split(names(coding.info), 
+                                                         "_", 
+                                                         simplify = T)[,1], 
+                                               str_split(names(coding.info), 
+                                                         "_", 
+                                                         simplify = T)[,2], 
+                                               sep = "_"),
+                                   variant.allele = as.character(coding.info$varAllele),
+                                   strand = as.character(coding.info@strand)
+                                   )
+```
+Now left join so that entries in snape snps are replicated for contig.info entris at same scaffold and position
+
+```{r}
+combined.coding.info.snape.snps <- left_join(coding.info.variants, snape.snps, by = "key")
+
+```
+Wrinkle: coding.info$varAllele is complemented if strand is set to -
+
+A custom function to return the complementary base. `Biostrings::complement()` does this but it won't work directly on strings and trying to round-trip is a pain.
+
+```{r}
+complement.base <- function(base){
+  res <- case_match(base,
+                    "T" ~ "A",
+                    "A" ~ "T",
+                    "G" ~ "C",
+                    "C" ~ "G",
+                    NA ~ "")
+  if (is.na(res)){
+    return("")
+    }
+  return(res)
+  }
+```
+
+Complement base if variant is on the negative strand, add to the `data.frame`
+
+```{r}
+complemented.bases <- sapply(combined.coding.info.snape.snps$variant.allele, complement.base)
+corrected.bases <- if_else(combined.coding.info.snape.snps$strand == "-",
+                           complemented.bases,
+                           combined.coding.info.snape.snps$variant.allele)
+names(corrected.bases) <- NULL
+
+combined.coding.info.snape.snps$corrected.variantAllele <- corrected.bases
+```
+
+Now we should be able to figure out if the corrected variant allele appears in the top 2 nucleotides reported by SNAPE at the site. If it does, we keep it as a valid SNP.
+
+Note that if we use "" as the pattern for `str_detect` it will return `NA`, so we need to account for that
+
+```{r warning=FALSE}
+tmp <- str_detect(combined.coding.info.snape.snps$top.two.nucs,
+                  combined.coding.info.snape.snps$corrected.variantAllele)
+
+combined.coding.info.snape.snps$valid.snp <- if_else(is.na(tmp), 
+                                                     FALSE, 
+                                                     tmp)
+
+```
+
+
+Now, after much finagling, we have a vector that will let us filter our `coding.info` elements to only the SNPs identified by SNAPE
+
+```{r}
+coding.info.valid <- coding.info[combined.coding.info.snape.snps$valid.snp]
+
+```
+
+How many SNPs fall in coding regions?
+
+```{r}
+length(coding.info.valid)
+```
+
+Now to count up synonymous versus non-synonymous sites
+
+```{r}
+table(mcols(coding.info.valid)$CONSEQUENCE)
+
+```
+
+Get the nonsynonymous sites
+
+```{r}
+coding.info.nonysnonymous <- coding.info.valid[mcols(coding.info.valid)$CONSEQUENCE == "nonsynonymous"]
+
+```
+```{r}
+coding.info.nonysnonymous
+```
+
+
+*We have kdr!!!*
+
+From the notes I made when annotating the sodium channel gene fragments:
+
+Multiple alignment of the protein translation of contig_322045 to the rice and palm weevil proteins PLUS the housefly protein (Q94615) shows that we do have the classic *kdr* mutation site (L1014F in housefly). The position of the codon is (-)428 - (-)425 and the assembled sequence encodes an L, as expected.
+
+The non-synonymous polymorphisms on contig_95372 are toeard the N-terminus of the protein.
+
+
+
+
+
+
+
+
+
+
