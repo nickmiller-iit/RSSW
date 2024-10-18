@@ -31,3 +31,28 @@ As an aside, F~ST~ outlier methods can't really be applied here since we don't h
 Do any of the SNPs we have identified change the amino acid sequence of the protein fragments?
 
 **YES!!!!** We have five non-synonymous SNPs one of with correspends neatly to the classic *kdr* mutation!!!!
+
+The kdr mutation is (contig:position ref/var)
+
+`contig_322045:428 G/A`
+
+The non-kdr non-synonymous sites occur near the N-terminus of the protein
+```
+contig_95372:336 G/C
+contig_95372:362 C/T
+contig_95372:375 C/G
+contig_95372:396 T/A
+```
+We can get the estimated frequency of the kdr mutation from the global SNAPE-pooled output
+
+```
+contig_322045   428     G       170     6       71      70      GA      1       0       0.04104
+```
+
+So, global frequency is low, 0.04.
+
+### Location specific frequencies
+
+We definitely want to know what the frequency of kdr is at each sample location. May as well do the other non-syn polymorphisms at the same time
+
+Did this in an R Notebook.
