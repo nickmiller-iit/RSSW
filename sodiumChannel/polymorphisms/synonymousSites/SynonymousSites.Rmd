@@ -223,7 +223,174 @@ From the notes I made when annotating the sodium channel gene fragments:
 
 Multiple alignment of the protein translation of contig_322045 to the rice and palm weevil proteins PLUS the housefly protein (Q94615) shows that we do have the classic *kdr* mutation site (L1014F in housefly). The position of the codon is (-)428 - (-)425 and the assembled sequence encodes an L, as expected.
 
-The non-synonymous polymorphisms on contig_95372 are toeard the N-terminus of the protein.
+The non-synonymous polymorphisms on contig_95372 are toward the N-terminus of the protein.
+
+## Non-synonymous SNP frequencies.
+
+We want to know the frequency of the kdr mutation globally and at each sample location. Luckily, we already have these from SNAPE-pooled. We even already have the global data loaded and set up with a key.
+
+First, get the contig:position part of the non-synonymous sites info so we can use it to lookup.
+
+```{r}
+non_synonymous.keys <- str_remove(names(coding.info.nonysnonymous), "_[A-Z]/[A-Z]")
+```
+
+Lets take a look at the global frequencies
+
+```{r}
+snape.snps[snape.snps$key %in% non_synonymous.keys,c(1, 2, 8, 11)]
+
+```
+So, the kdr allele is at fairly low frequency, about 0.04.
+
+## Site specific frequencies
+
+What about at individual sample locations. We have individual SNAPE output files for each site.
+
+```{r}
+site.snape.files <- list.files("../variantCalling/SNAPE/samples/", "*.out")
+site.snape.files <- paste("../variantCalling/SNAPE/samples", site.snape.files, sep = "/")
+site.snape.files
+```
+
+Need to do a bit of looping here to build up a big data.frame of SNAPE output plus extra columns with the contig:position key and the location,
+
+```{r}
+## first location
+
+site.snape.results <- read.table(site.snape.files[1])
+
+names(site.snape.results) <- c("scaffold",
+                               "pos",
+                               "ref",
+                               "ref.count",
+                               "alt.count",
+                               "ref.qual",
+                               "alt.qual",
+                               "top.two.nucs",
+                               "1-p(0)",
+                               "p(1)",
+                               "frequency")
+
+
+site.snape.results$location <- rep(str_split_i(str_remove(site.snape.files[1],
+                                                          "../variantCalling/SNAPE/samples/"), 
+                                               "\\.", 
+                                               1), 
+                                   length(site.snape.results$scaffold))
+
+site.snape.results$key <- paste(site.snape.results$scaffold, 
+                                site.snape.results$pos, 
+                                sep = ":")
+
+
+## remaining locations
+
+for (i in 2:length(site.snape.files)){
+  tmp <- read.table(site.snape.files[i],
+                    fill = T)
+  
+  names(tmp) <- c("scaffold",
+                  "pos",
+                  "ref",
+                  "ref.count",
+                  "alt.count",
+                  "ref.qual",
+                  "alt.qual",
+                  "top.two.nucs",
+                  "1-p(0)",
+                  "p(1)",
+                  "frequency")
+  
+  
+  tmp$location <- rep(str_split_i(str_remove(site.snape.files[i],
+                                             "../variantCalling/SNAPE/samples/"), 
+                                  "\\.", 
+                                  1), 
+                      length(tmp$scaffold))
+  
+  tmp$key <- paste(tmp$scaffold, 
+                   tmp$pos, 
+                   sep = ":")
+  
+  site.snape.results <- rbind(site.snape.results,
+                              tmp)
+
+}
+
+```
+
+For figures, we re-code site names as 1 - 8, 1 being the most northerly site. Add this information to the
+site results:
+
+```{r}
+site.info <- read.table("siteInfo.txt",
+                        header = T)
+#rename OldName col to location for easier left joins
+names(site.info)[1] <- "location"
+site.info
+
+```
+Add the site location info and site numbers for manuscript to the sample allele frequency results.
+
+
+```{r}
+site.snape.results <- left_join(site.snape.results, 
+                                site.info, 
+                                by = "location")
+
+```
+
+
+Get just the site frequencies for non-synonymous sites.
+
+```{r}
+non_synonymous.site.freqs <- subset(site.snape.results, key %in% non_synonymous.keys)
+
+```
+
+## Plot of kdr frequencies by site
+
+Subset the kdr frequencies, sort so that sites are ordered north to south.
+
+```{r}
+kdr.freqs <- subset(non_synonymous.site.freqs, key == "contig_322045:428")
+kdr.freqs <- kdr.freqs[order(kdr.freqs$MSName, decreasing = F),]
+kdr.freqs
+```
+
+Simple barplot
+
+```{r}
+barplot(height = kdr.freqs$frequency,
+        names.arg = kdr.freqs$MSName,
+        col = "steelblue2",
+        xlab = "site",
+        ylab = "frequency",
+        main = "kdr allele frequency")
+dev.copy2pdf(file = "kdr.frequency.barplot.pdf")
+```
+Since sites are not equally spaced, plot frequency against latitude.
+
+```{r}
+plot(kdr.freqs$Latitude,
+     kdr.freqs$frequency,
+     pch = 21,
+     bg = "red",
+     xlab = "latitude",
+     ylab = "frequency",
+     main = "kdr allele frequency")
+
+dev.copy2pdf(file = "kdr.frequency.latitude.pdf")
+```
+
+
+
+
+
+
+
+
 
 
 

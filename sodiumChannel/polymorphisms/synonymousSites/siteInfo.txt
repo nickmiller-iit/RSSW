@@ -1,0 +1,9 @@
+OldName	MSName	State	County	Longitude	Latitude
+K	1	ND	Grand_Forks	-97.33159	47.84578
+L	2	ND	Emmons		-100.27274	46.39307
+B	3	ND	Emmons		-100.25799	46.29107
+D	4	ND	Emmons		-100.10852	46.06625
+H	5	SD	Campbell	-100.06469	45.84006
+S	6	SD	Potter		-100.0524	45.07169
+O	7	SD	Hughes		-100.0474	44.48269
+T	8	CO	Weld		-104.9771	40.04237

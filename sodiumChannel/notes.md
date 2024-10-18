@@ -250,3 +250,5 @@ contig_195328	.	exon	689	1006	.	-	.	Parent=ae3bc4d9-f164-4cb4-868e-6fabef29f06b;
 # Location of the *kdr* site
 
 Multiple alignment of the protein translation of contig_322045 to the rice and palm weevil proetins PLUS the housefly protein (Q94615) shows that we do have the classic *kdr* mutation site (L1014F in housefly). The position of the codon is (-)428 - (-)425 and the assembled sequence encodes and L, as expected. We do not have the site of the *super-kdr* mutation (M918L in housefly).
+
+
