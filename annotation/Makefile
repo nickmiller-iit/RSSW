@@ -121,3 +121,50 @@ $(BUSCOOutFile): $(brakerOut)
 .PHONY: busco
 
 busco: $(BUSCOOutFile)
+
+# Looking for Cytochrome P450s with interproscan
+# Despite repeated apptempts, getting the conda version of interproscan to work was a non-starter.
+# Instead use containerzied version with singularity.
+
+interProContainer=interproscan_latest.sif
+
+$(interProContainer):
+	singularity pull docker://interpro/interproscan:latest
+
+interProOutDir=interproscan.out
+
+interProDataDir=interproscan-5.72-103.0/data
+
+interProTmpDir=temp
+
+interProInputDir=interproscan.in
+
+$(interProOutDir):
+	if [ ! -d $(interProOutDir) ]; then mkdir $(interProOutDir); fi
+
+$(interProTmpDir):
+	if [ ! -d $(interProTmpDir) ]; then mkdir $(interProTmpDir); fi
+
+
+$(interProInputDir):
+	if [ ! -d $(interProInputDir) ]; then mkdir $(interProInputDir); fi
+
+# One of the default ouputs is tsv
+
+interProOut=$(interProDir)/$(annotationsFinal).tsv
+
+interProOpts=--input /input/tmp.fasta --output-dir /output --tempdir /temp  --goterms --cpu 12
+
+singularityOpts=-B $(PWD)/$(interProDataDir):/opt/interproscan/data -B $(PWD)/$(interProInputDir):/input -B $(PWD)/$(interProTmpDir):/temp -B $(PWD)/$(interProOutDir):/output
+
+
+
+#NB have to strip asterisks from input
+$(interProOut): $(annotationsFinal) $(interProContainer) | $(interProOutDir) $(interProDataDir) $(interProTmpDir) $(interProInputDir)
+	cat $(annotationsFinal)  | sed 's/\*//g' > $(interProInputDir)/tmp.fasta
+	singularity exec $(singularityOpts) $(interProContainer) /opt/interproscan/interproscan.sh $(interProOpts)
+	rm -r $(interProTmpDir) $(interProInputDir)
+
+.PHONY: interpro
+
+interpro: $(interProOut)
