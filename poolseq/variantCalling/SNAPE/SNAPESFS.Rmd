@@ -49,7 +49,7 @@ hist(maf,
      main = "Folded site frequency spectrum",
      xlab = "minor allele frequency",
      col = "firebrick3")
-
+dev.copy2pdf(file = "SFS.pdf")
 ```
 
 
