@@ -142,29 +142,32 @@ interProInputDir=interproscan.in
 $(interProOutDir):
 	if [ ! -d $(interProOutDir) ]; then mkdir $(interProOutDir); fi
 
-$(interProTmpDir):
-	if [ ! -d $(interProTmpDir) ]; then mkdir $(interProTmpDir); fi
+# $(interProTmpDir):
+# 	if [ ! -d $(interProTmpDir) ]; then mkdir $(interProTmpDir); fi
 
 
-$(interProInputDir):
-	if [ ! -d $(interProInputDir) ]; then mkdir $(interProInputDir); fi
+# $(interProInputDir):
+# 	if [ ! -d $(interProInputDir) ]; then mkdir $(interProInputDir); fi
 
 # One of the default ouputs is tsv
 
-interProOut=$(interProDir)/$(annotationsFinal).tsv
+interProOut=$(interProOutDir)/$(annotationsFinal).tsv
 
-interProOpts=--input /input/tmp.fasta --output-dir /output --tempdir /temp  --goterms --cpu 12
+interProOpts=--input /input/$(annotationsFinal) --output-dir /output --tempdir /temp  --goterms --cpu 12
 
 singularityOpts=-B $(PWD)/$(interProDataDir):/opt/interproscan/data -B $(PWD)/$(interProInputDir):/input -B $(PWD)/$(interProTmpDir):/temp -B $(PWD)/$(interProOutDir):/output
 
 
 
 #NB have to strip asterisks from input
-$(interProOut): $(annotationsFinal) $(interProContainer) | $(interProOutDir) $(interProDataDir) $(interProTmpDir) $(interProInputDir)
-	cat $(annotationsFinal)  | sed 's/\*//g' > $(interProInputDir)/tmp.fasta
+$(interProOut): $(annotationsFinal) $(interProContainer) | $(interProOutDir) $(interProDataDir)
+	if [ ! -d $(interProTmpDir) ]; then mkdir $(interProTmpDir); fi
+	if [ ! -d $(interProInputDir) ]; then mkdir $(interProInputDir); fi
+	cat $(annotationsFinal)  | sed 's/\*//g' > $(interProInputDir)/$(annotationsFinal)
 	singularity exec $(singularityOpts) $(interProContainer) /opt/interproscan/interproscan.sh $(interProOpts)
 	rm -r $(interProTmpDir) $(interProInputDir)
 
 .PHONY: interpro
 
 interpro: $(interProOut)
+
