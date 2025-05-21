@@ -171,3 +171,75 @@ $(interProOut): $(annotationsFinal) $(interProContainer) | $(interProOutDir) $(i
 
 interpro: $(interProOut)
 
+# Fishing out the likely cytochrome P450s
+
+P450Dir=cytochromeP450
+
+$(P450Dir):
+	if [ ! -d $(P450Dir) ]; then mkdir $(P450Dir); fi
+
+# get the list of P450s
+
+P450List=$(P450Dir)/cytochromeP450.list
+
+$(P450List): $(interProOut)  | $(P450Dir)
+	grep [Pp]450 $(interProOut) | cut -f1 | sort -u > $(P450List)
+
+
+# get the sequences of the P450s. While we are at it, remove the * for stop codon that braker puts in
+
+P450Seqs=$(P450Dir)/cytochromeP450.fasta
+
+
+$(P450Seqs): $(P450List) $(annotationsFinal)
+	conda run --no-capture-output -n rssw-seqkit seqkit grep -f $(P450List) $(annotationsFinal) | sed 's/\*//g' > $(P450Seqs)
+
+.PHONY: p450s
+
+p450s: $(P450Seqs)
+
+# A few sequences are from fused gene models, clean those up
+# There are also 2 NADPH-cytochrome p450 reductases (jg41129.t1 and jg24569.t1) that need to be removed
+P450SeqsEdited=$(P450Dir)/cytochromeP450_edited.fasta
+
+
+$(P450SeqsEdited): $(P450Seqs)
+	echo jg6524.t1 > $(P450Dir)/toedit.list
+	echo jg12337.t1 >> $(P450Dir)/toedit.list
+	echo jg32387.t1 >> $(P450Dir)/toedit.list
+	grep -v -f $(P450Dir)/toedit.list  cytochromeP450/cytochromeP450.list | grep -v jg41129.t1 | grep -v jg24569.t1   > $(P450Dir)/noedit.list
+	conda run --no-capture-output -n rssw-seqkit seqkit grep -f $(P450Dir)/noedit.list $(P450Seqs) > $(P450SeqsEdited)
+	conda run --no-capture-output -n rssw-seqkit seqkit grep -p jg6524.t1 $(P450Seqs) | conda run --no-capture-output -n rssw-seqkit seqkit subseq -r 235:741 >> $(P450SeqsEdited)
+	conda run --no-capture-output -n rssw-seqkit seqkit grep -p jg12337.t1 $(P450Seqs) | conda run --no-capture-output -n rssw-seqkit seqkit subseq -r 389:804  >> $(P450SeqsEdited)
+	conda run --no-capture-output -n rssw-seqkit seqkit grep -p jg32387.t1 $(P450Seqs) | conda run --no-capture-output -n rssw-seqkit seqkit subseq -r 372:815 >> $(P450SeqsEdited)
+	rm $(P450Dir)/toedit.list $(P450Dir)/noedit.list
+
+
+.PHONY: p450s-edited
+
+p450s-edited: $(P450SeqsEdited)
+
+
+# Align the CYPs that are >- 350 aas in length, i.e. near full length
+
+## List of full lenngth CYPs comes from R markdown document
+
+p450sLongList=$(P450Dir)/cytochromeP450_long.list
+
+p450sLongSeqs=$(P450Dir)/cytochromeP450_long.fasta
+
+$(p450sLongSeqs): $(P450SeqsEdited) $(p450sLongList)
+	conda run --no-capture-output -n rssw-seqkit seqkit grep -f $(p450sLongList) $(P450SeqsEdited) > $(p450sLongSeqs)
+
+## align the full length CYPS with muscle
+
+p450sLongSeqsAligned=$(P450Dir)/cytochromeP450_long_aligned.fasta
+
+$(p450sLongSeqsAligned): $(p450sLongSeqs)
+	conda run --no-capture-output -n rssw-muscle muscle -in $(p450sLongSeqs) -fastaout $(p450sLongSeqsAligned) -htmlout $(subst fasta,html,$@) -clwout $(subst fasta,clus,$@)
+
+
+.PHONY: p450-align
+
+
+p450-align: $(p450sLongSeqsAligned)

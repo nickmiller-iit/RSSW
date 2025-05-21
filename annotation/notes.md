@@ -58,3 +58,33 @@ A modest improvement, but not spectacular.
 
 Fundamentaly, the problem is a genome assembled from low coverage sequencing just isn't all that great. This was pretty much expected from the outset.
 
+## Sodium Channel Gene
+
+This got complicated enough that it is it's own directory with Makefile and notes
+
+## Cytochrome P450s
+
+### Finding with InterProScan
+
+After several attempts to get InterProScan running through Conda, it bacame clear that this was not going to work. Userd Singularity instead.
+
+Ran InterProScan on the BRAKER2 Predicred proteins.
+
+Running grep to look for "P450" or "p450" in the tsv output from InterProScan gives a total of 81 likely P450s.
+
+Lengths of the predicted CYPs are analyzed in the R Markdown doc. One immediate issue was three sequences that are >700 residues, way longer than we expect for a CYP: jg6524.t1, jg12337.t1, jg32387.t1. Taking a look at these with the online version of InterProScan confirms that these ap[pear to be fused gene models. In each case there is a near-complete CYP at the C-term. Annotations for the N-term are:
+
+jg6524.t1: Nothing
+jg12337.t1: A partial cytochrome P450
+jg32387.t1: Thyroglobulin domain
+
+The regions with the full length CYP are
+
+jg6524.t1: 234 - 741
+jg12337.t1: 389 - 804
+jg32387.t1: 372 - 815
+
+
+After edinting these there were a couple of outliers at 584 and 629 aas (jg41129.t1 and jg24569.t1). Closer inspection revelaed that these were annotated as NADPH-cytochrome p450 reductase. Removed these from the edited set, leaving a total of 79 CYPs.
+
+
