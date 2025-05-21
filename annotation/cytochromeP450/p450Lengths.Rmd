@@ -1,0 +1,87 @@
+---
+title: "Length distribution of RSSW cytoshome P450 sequences"
+output: html_notebook
+---
+
+We have a set of 81 sequences that are likely cytochrome P450s. Let's see how many are close to what we expect for a full length CYP protein.
+
+# Libraries
+
+```{r}
+library(seqinr)
+library(dplyr)
+```
+
+# Initial analysis
+
+## Load the sequences
+
+```{r}
+fastaFile <- "cytochromeP450.fasta"
+seqs <- read.fasta(file = fastaFile,
+                  seqtype = "AA")
+```
+
+## Get the lengths
+
+```{r}
+cyp.lengths <- unlist(lapply(seqs, length))
+```
+
+## Intital length plot
+
+Note a close to full length CYP is generally in the range of 350 - 500 residues
+
+```{r}
+length.dist <- hist(cyp.lengths, 
+                    breaks = 50)
+
+```
+So, we have quite a few below 350, which are likely partial sequences. Interstingly, we also have three sequences that are > 700 residues. This is much larger than we expect for a CYP and may be other proteins or fused gene models.
+
+What are the outsized sequences?
+
+```{r}
+names(cyp.lengths[cyp.lengths > 700])
+
+```
+
+# Analysis of edited seqs
+
+Corrected the issues with the over-long sequences.
+
+## Read the data
+
+```{r}
+editedFastaFile <- "cytochromeP450_edited.fasta"
+edited.seqs <- read.fasta(file = editedFastaFile,
+                  seqtype = "AA")
+```
+## Get the lengths
+
+```{r}
+edited.cyp.lengths <- unlist(lapply(edited.seqs, length))
+```
+
+## Plot the lengths
+
+```{r}
+edited.length.dist <- hist(edited.cyp.lengths, 
+                    breaks = 50,
+                    main = "Cytochrome P450 length distribution",
+                    xlab = "residues",
+                    ylab = "count",
+                    col = "darkolivegreen1")
+
+```
+
+## Get (near) full length CYPs
+```{r}
+write.table(data.frame(name = names(edited.cyp.lengths[edited.cyp.lengths >= 350])),
+            file = "cytochromeP450_long.list",
+            row.names = F,
+            col.names = F,
+            quote = F)
+
+```
+
