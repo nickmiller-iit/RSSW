@@ -1,0 +1,91 @@
+---
+title: "Comparison of protein length distirbutions"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Rationale
+
+We have over 50,000 predicted proteins from RSSW. This seems like way too many. My hypothesis that because of the fragemented assembly and the low RNA-Seq coverage, many of the RSSW genes are split. To test this, compare the number and length distributions of proteins from RSSW and boll weevil.
+
+# Libraries and data
+
+Seqinr package to read and analyze sequence data
+
+```{r}
+library(seqinr)
+```
+
+Boll weevil proteins from NCBI reference genome.
+
+```{r}
+bollWeevilData <- "bollWeevilProteins.fasta"
+```
+
+RSSW proteins from BRAKER2
+
+```{r}
+rsswData <- "../braker.proteins.fasta"
+```
+
+
+```{r}
+bollWeevil <- read.fasta(bollWeevilData)
+rssw <- read.fasta(rsswData)
+```
+
+# Analysis of number and length distribution of proteins
+
+```{r}
+bollWeevilLengths <- getLength(bollWeevil)
+rsswLengths <- getLength(rssw)
+```
+
+How many proteins total?
+
+```{r}
+length(bollWeevilLengths)
+length(rsswLengths)
+```
+
+So yes, there are a lot more predicted proteins for rssw as boll weevil
+
+```{r}
+length(rsswLengths) / length(bollWeevilLengths)
+```
+
+More than twice as many in fact.
+
+What's the mean protein length for each species?
+
+```{r}
+mean(bollWeevilLengths)
+mean(rsswLengths)
+mean(rsswLengths) / mean(bollWeevilLengths)
+```
+
+So the average RSSW protein is half the length of the average boll weevil protein.
+
+Finally, let's compare the distributions. Because there is a long tail of a few very large proteins for boll weevil, plot the distribution of $\log_{10} length$
+
+```{r}
+plot(density(log10(bollWeevilLengths)),
+     main = "Distribution of Predicted Protein Lengths",
+     xlab = expression(log10(residues)))
+
+lines(density(log10(rsswLengths)),
+      col = "red")
+
+legend("topright",
+       legend = c("boll weevil",
+                  "red sunflower seed weevil"),
+       col = c("black",
+               "red"),
+       lty = "solid")
+
+dev.copy2pdf(file = "proteinLengthDistribution.pdf")
+```
+So, our hypothesis is supported looks like we have a bunch of split gene models for RSSW.
+
+
